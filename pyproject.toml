@@ -10,7 +10,8 @@ authors = [
 
 dependencies = [
     # 编排层
-    "langgraph>=0.2",                  # 状态机骨架(0C 之后接 Postgres checkpointer)
+    "langgraph>=1.0",                  # 状态机骨架(0C 接 Postgres checkpointer)
+    "langgraph-checkpoint-postgres>=2.0",  # PostgresSaver(可选,docker compose 起 PG 后用)
     "pydantic>=2.0",                   # schema 校验
 
     # LLM 调用层
