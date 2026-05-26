@@ -1,0 +1,58 @@
+[project]
+name = "agent-org"
+version = "0.1.0"
+description = "Autonomous Multi-Agent 研发系统(V1)"
+requires-python = ">=3.11"
+readme = "README.md"
+authors = [
+    { name = "Owner" }
+]
+
+dependencies = [
+    # 编排层
+    "langgraph>=0.2",                  # 状态机骨架(0C 之后接 Postgres checkpointer)
+    "pydantic>=2.0",                   # schema 校验
+
+    # LLM 调用层
+    "anthropic>=0.40",                 # Claude API
+
+    # 数据层(0C 之后用,0A/0B 占位声明)
+    "psycopg[binary]>=3.1",            # Postgres driver(async)
+    "sqlalchemy>=2.0",                 # ORM(可选)
+    "alembic>=1.13",                   # schema migration
+
+    # 观测层
+    "langfuse>=2.0",                   # LLM trace + cost(0C 之后用)
+    "structlog>=24.0",                 # 结构化日志(0B 用)
+
+    # 工具
+    "pyyaml>=6.0",
+    "jsonschema>=4.0",
+    "rich>=13.0",                      # 命令行输出
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "import-linter>=2.0",              # v2.3 模块边界强制
+    "check-jsonschema>=0.28",          # 命令行 schema 校验
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
+ignore = ["E501"]                      # 行长由 ruff format 管
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true

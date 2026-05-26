@@ -1,0 +1,51 @@
+# 敏感配置
+.env
+.env.*
+!.env.example
+secrets/
+private_keys/
+
+# 运行时数据(不进 git)
+runs/
+tasks/active/
+tasks/done/
+tasks/failed/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# uv
+.uv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 数据库 dump / 备份
+*.dump
+*.sql.gz
+backups/
+
+# Langfuse / observability 本地数据
+postgres_data/
+langfuse_data/
