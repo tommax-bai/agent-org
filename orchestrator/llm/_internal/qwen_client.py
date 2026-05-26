@@ -48,6 +48,10 @@ def estimate_qwen_cost(model: str, input_tokens: int, output_tokens: int) -> flo
     return (input_tokens / 1_000_000) * p["input"] + (output_tokens / 1_000_000) * p["output"]
 
 
+from orchestrator.llm._internal.langfuse_trace import trace_llm_call
+
+
+@trace_llm_call
 def call_qwen(
     system_prompt: str,
     user_message: str,

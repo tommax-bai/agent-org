@@ -1,5 +1,10 @@
 """跨模块共享类型 / 基础设施。最底层,所有模块都能 import。"""
 
+from orchestrator._shared.storage_backend import (
+    StorageBackend,
+    database_url,
+    storage_backend,
+)
 from orchestrator._shared.types import (
     # tasks / project
     Task,
@@ -35,6 +40,11 @@ from orchestrator._shared.types import (
 )
 
 __all__ = [
+    # storage backend
+    "StorageBackend",
+    "storage_backend",
+    "database_url",
+    # types
     "Task",
     "ProjectConfig",
     "RoleConfig",

@@ -17,10 +17,9 @@ dependencies = [
     "anthropic>=0.40",                 # Claude API
     "openai>=1.40",                    # DashScope(Qwen)OpenAI 兼容接口 + 其他 provider
 
-    # 数据层(0C 之后用,0A/0B 占位声明)
-    "psycopg[binary]>=3.1",            # Postgres driver(async)
-    "sqlalchemy>=2.0",                 # ORM(可选)
-    "alembic>=1.13",                   # schema migration
+    # 数据层(0C 启用)
+    "psycopg[binary]>=3.1",            # Postgres driver
+    "python-dotenv>=1.0",              # .env 加载
 
     # 观测层
     "langfuse>=2.0",                   # LLM trace + cost(0C 之后用)
