@@ -7,9 +7,9 @@ description: 任务编排者 — 业务拆解 + 角色调度。不做技术决�
 is_orchestrator: true
 
 model_policy:
-  preferred: claude-sonnet-4-5
+  preferred: qwen-plus       # 阿里 DashScope。换 claude-sonnet-4-5 / qwen-max 等同样可
   fallback:
-    - claude-opus-4-7  # 复杂任务可升级
+    - qwen-max               # 复杂任务可升级
 
 # PM 产生的 artifact 类型是 dispatch_plan
 artifact_type: dispatch_plan
