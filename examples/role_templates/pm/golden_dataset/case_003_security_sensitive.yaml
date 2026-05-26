@@ -1,0 +1,69 @@
+case_id: case_003_security_sensitive
+description: |
+  PM 对一个触发 mandatory rule(security_sensitive_task)的任务的拆解。
+  关键测试:PM 是否主动加 security_reviewer + 在 role_dispatch_notes 说明
+tags: [integration_feature, security, mandatory_rule, medium]
+difficulty: medium
+
+input:
+  task_id: test-pm-003
+  role_id: pm
+  context_pack:
+    task_context:
+      title: "对接 Google OAuth 登录"
+      owner_request: |
+        加 Google OAuth 第三方登录:
+        - 用户能用 Google 账号登录
+        - 拿到 Google 返回的 token 后,关联到本系统的用户
+        - 已有账号(同邮箱)自动绑定,新用户自动注册
+
+        包括前端按钮 + 后端 OAuth 回调处理 + 用户表加 google_id 字段
+      success_criteria:
+        - "Google OAuth 登录全链路工作"
+        - "token 处理安全(不打 log / 不明文存)"
+        - "已有邮箱绑定逻辑正确"
+      constraints:
+        - "用 official google-oauth-go 库,不自己实现"
+      budget_usd: 25.0
+    project_context:
+      roles: [pm, developer, reviewer, architect, security_reviewer]
+      role_groups:
+        simple_feature: {roles: [developer, reviewer]}
+        complex_feature: {roles: [architect, developer, reviewer]}
+        integration_feature: {roles: [architect, developer, security_reviewer, reviewer]}
+        bug_fix: {roles: [developer, reviewer]}
+        refactor: {roles: [architect, developer, reviewer]}
+    dispatch_policy:
+      mandatory_role_rules:
+        - id: security_sensitive_task
+          if_any:
+            task_contains: [OAuth, SSO, token, password, secret, encryption, auth, login, JWT]
+          require_roles: [security_reviewer]
+      pm_deviation_policy:
+        can_add_roles: true
+        can_remove_template_roles: true
+        cannot_remove_mandatory_roles: true
+    previous_violation: null
+  prior_role_signals: []
+
+expected:
+  verdict: success
+  artifact:
+    type: dispatch_plan
+    content:
+      business_breakdown_min_count: 1
+      all_subtasks_contain_role:
+        - security_reviewer       # 必须每个 subtask 都有(因为整个任务是 security_sensitive)
+      contains_subtask_with_role_sequence:
+        - includes_role: architect
+        - includes_role: developer
+        - includes_role: security_reviewer
+        - includes_role: reviewer
+      role_dispatch_notes_non_empty: true  # 必须说明 security_reviewer 怎么加的
+      confidence_range: [0.7, 0.95]
+
+forbidden:
+  - "verdict=escalate"
+  - "无 security_reviewer 任何 subtask"  # 触发 mandatory rule 必须有
+  - "subtask_count > 5"
+  - "role_dispatch_notes 为空 + 含 security_reviewer"  # 加非模板角色必须说明

@@ -1,0 +1,41 @@
+role_id: reviewer
+version: v0.1.0
+name: Reviewer
+description: 审查 Developer / Architect 的产物,输出结构化 review。
+
+is_orchestrator: false
+
+model_policy:
+  preferred: claude-sonnet-4-5
+  fallback: []
+
+artifact_type: review
+
+capabilities:
+  - read_code
+  - read_design
+  - structured_evaluation
+
+inputs:
+  required:
+    - task_context
+    - business_goal
+    - related_artifacts       # 必须有(Developer / Architect 的产物)
+
+outputs:
+  required:
+    - verdict
+    - artifact.content.verdict          # approve | request_changes | reject
+    - artifact.content.must_escalate_to_owner   # v2.4
+    - artifact.content.escalation_reason        # must_escalate=true 时必填
+    - artifact.content.correctness_score
+    - artifact.content.design_quality_score
+    - artifact.content.test_coverage
+    - artifact.content.blocking_issues
+
+safety:
+  forbidden:
+    - modify_code               # Reviewer 只审,不改
+
+budget:
+  per_invocation_usd_max: 3

@@ -1,0 +1,40 @@
+role_id: YOUR_ROLE_ID
+version: v0.1.0
+name: Your Role Name
+description: 一句话说明这个角色干什么
+
+# v2.4:framework 唯一硬约束。担任 PM 职责的角色标 true。
+# 一个 project.yaml 里恰好一个角色标 true。
+is_orchestrator: false
+
+model_policy:
+  preferred: claude-sonnet-4-5
+  fallback: []
+
+# 这个角色产生什么类型的 artifact(对应 schemas/artifact_content/<type>.schema.json)
+artifact_type: analysis
+
+capabilities:
+  # 列出这个角色能做什么,自由词汇
+  - read_code
+
+inputs:
+  # 从 role_invocation_input.context_pack 里读哪些字段
+  required:
+    - task_context
+    - business_goal
+
+outputs:
+  # role_invocation_output 必须填的关键字段(top-level + artifact.content)
+  required:
+    - verdict
+    - artifact.content
+
+safety:
+  forbidden:
+    - delete_repository
+    - modify_secrets
+    - force_push
+
+budget:
+  per_invocation_usd_max: 3

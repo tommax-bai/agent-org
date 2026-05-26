@@ -1,0 +1,44 @@
+role_id: pm
+version: v0.1.0
+name: PM
+description: 任务编排者 — 业务拆解 + 角色调度。不做技术决策、不写代码、不审查。
+
+# v2.4:PM 担任 orchestrator 职责,project.yaml 里通常它标 true(也可换名)
+is_orchestrator: true
+
+model_policy:
+  preferred: claude-sonnet-4-5
+  fallback:
+    - claude-opus-4-7  # 复杂任务可升级
+
+# PM 产生的 artifact 类型是 dispatch_plan
+artifact_type: dispatch_plan
+
+capabilities:
+  - understand_task
+  - decompose_task
+  - select_roles
+
+inputs:
+  required:
+    - owner_request
+    - project_context        # role_groups + roles 列表
+    - dispatch_policy        # mandatory_role_rules + pm_deviation_policy
+
+outputs:
+  required:
+    - verdict
+    - artifact.content.parsed_intent
+    - artifact.content.assumptions
+    - artifact.content.business_breakdown      # 含 role_sequence(v2.4)
+    - artifact.content.role_dispatch_notes     # 偏离模板时填
+    - artifact.content.confidence
+
+safety:
+  forbidden:
+    - modify_code
+    - directly_invoke_other_roles
+    - bypass_dispatch_policy
+
+budget:
+  per_invocation_usd_max: 3

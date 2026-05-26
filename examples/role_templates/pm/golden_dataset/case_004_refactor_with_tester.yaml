@@ -1,0 +1,57 @@
+case_id: case_004_refactor_with_tester
+description: |
+  PM 对一个 refactor 任务的拆解,需要主动加 tester。
+  关键测试:PM 是否能根据"需要回归测试"判断,主动加 tester(role_groups 模板里 refactor 已含 tester)
+tags: [refactor, tester, multi_subtask, medium]
+difficulty: medium
+
+input:
+  task_id: test-pm-004
+  role_id: pm
+  context_pack:
+    task_context:
+      title: "重构 order service 拆出 payment 模块"
+      owner_request: |
+        order service 现在又处理订单又处理支付,代码 5000 行,难维护。
+        把 payment 相关逻辑(创建支付单 / 支付回调 / 退款 / 对账)拆到独立的 payment module。
+        重构,不改业务行为。
+      success_criteria:
+        - "payment 模块独立,order 不再直接处理支付"
+        - "现有所有测试通过(行为不变)"
+        - "性能不退化"
+      constraints:
+        - "不改对外 API 契约"
+        - "不修改数据库 schema"
+      budget_usd: 30.0
+    project_context:
+      roles: [pm, developer, reviewer, architect, tester]
+      role_groups:
+        simple_feature: {roles: [developer, reviewer]}
+        complex_feature: {roles: [architect, developer, reviewer]}
+        bug_fix: {roles: [developer, reviewer]}
+        refactor: {roles: [architect, developer, tester, reviewer]}
+    dispatch_policy:
+      mandatory_role_rules: []
+      pm_deviation_policy:
+        can_add_roles: true
+        can_remove_template_roles: true
+        cannot_remove_mandatory_roles: true
+  prior_role_signals: []
+
+expected:
+  verdict: success
+  artifact:
+    type: dispatch_plan
+    content:
+      business_breakdown_min_count: 2
+      business_breakdown_max_count: 5
+      contains_subtask_with_role_sequence:
+        - includes_role: architect       # 重构必须有 architect
+        - includes_role: tester          # refactor 模板自带 tester
+      confidence_range: [0.65, 0.9]
+
+forbidden:
+  - "verdict=escalate"
+  - "无 architect 任何 subtask"
+  - "无 tester 任何 subtask"           # refactor 必须有 tester(模板里就有)
+  - "subtask_count > 6"

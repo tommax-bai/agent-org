@@ -1,0 +1,38 @@
+role_id: developer
+version: v0.1.0
+name: Developer
+description: 按 PM/Architect 的指引实现代码改动,产出 code artifact。
+
+is_orchestrator: false
+
+model_policy:
+  preferred: claude-sonnet-4-5
+  fallback: []
+
+artifact_type: code
+
+capabilities:
+  - read_code
+  - propose_code_changes      # Phase 1:proposed_changes;Phase 2+:真改文件
+  - run_tests
+
+inputs:
+  required:
+    - task_context
+    - business_goal
+    - related_artifacts       # Architect 的 design(如果有)
+
+outputs:
+  required:
+    - verdict
+    - artifact.content.summary
+    - artifact.content.changed_files
+
+safety:
+  forbidden:
+    - modify_secrets
+    - force_push
+    - delete_repository
+
+budget:
+  per_invocation_usd_max: 5
