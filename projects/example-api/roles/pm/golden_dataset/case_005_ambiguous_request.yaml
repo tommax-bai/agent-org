@@ -1,0 +1,62 @@
+case_id: case_005_ambiguous_request
+description: |
+  PM 对一个含糊任务的拆解。Owner request 模糊、success_criteria 不明确。
+  关键测试:
+  - PM 应该 confidence 较低(< 0.7)
+  - PM 应该在 assumptions 里明确假设(risk=high 或 medium)
+  - PM 应该发 signal 给 Owner(immediate_escalate 不至于,但 severity=high 提醒)
+tags: [edge_case, ambiguous, signal, hard]
+difficulty: hard
+
+input:
+  task_id: test-pm-005
+  role_id: pm
+  context_pack:
+    task_context:
+      title: "改进一下注册流程"
+      owner_request: |
+        注册流程现在不太好用,改一下。
+      success_criteria: []   # 故意留空,测 PM 处理
+      constraints: []
+      budget_usd: 15.0
+    project_context:
+      roles: [pm, developer, reviewer, architect, security_reviewer]
+      role_groups:
+        simple_feature: {roles: [developer, reviewer]}
+        complex_feature: {roles: [architect, developer, reviewer]}
+        bug_fix: {roles: [developer, reviewer]}
+        refactor: {roles: [architect, developer, reviewer]}
+        integration_feature: {roles: [architect, developer, security_reviewer, reviewer]}
+    dispatch_policy:
+      mandatory_role_rules: []
+      pm_deviation_policy:
+        can_add_roles: true
+        can_remove_template_roles: true
+    previous_violation: null
+  prior_role_signals: []
+
+expected:
+  # 可接受两种合理输出:
+  # (A) PM 努力拆解,但 confidence 低 + assumptions 明确 + 发 signal 给 Owner
+  # (B) PM 直接 escalate(显式拒绝模糊任务),用 immediate_escalate_required=true
+
+  # 评分时优先 (A),(B) 也算通过
+  acceptable_path_a:
+    verdict: success
+    artifact:
+      type: dispatch_plan
+      content:
+        confidence_range: [0.3, 0.7]            # 低 confidence
+        assumptions_min_count: 2                # 必须列假设
+        assumptions_contain_high_risk: true     # 至少一条 risk=high
+    signals_to_other_roles:
+      contains_signal_to_owner_with_severity_high: true
+
+  acceptable_path_b:
+    verdict: escalate
+
+forbidden:
+  - "confidence > 0.8"                          # 模糊任务不该高 confidence
+  - "assumptions 为空"                           # 必须列假设
+  - "verdict=success + 无 high signal + 无 assumption risk=high"  # 太乐观了
+  - "subtask_count > 4"                         # 模糊任务不要瞎拆

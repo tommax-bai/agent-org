@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-org/schemas/task.schema.json",
+  "title": "Task",
+  "description": "tasks/inbox/<task>.yaml 的格式",
+  "type": "object",
+  "required": ["task_id", "title", "project_id", "owner_request"],
+  "additionalProperties": false,
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "pattern": "^task-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+$",
+      "description": "格式 task-YYYY-MM-DD-NNN"
+    },
+    "title": {"type": "string", "minLength": 1, "maxLength": 200},
+    "project_id": {"type": "string", "minLength": 1},
+    "priority": {
+      "type": "string",
+      "enum": ["low", "normal", "high", "urgent"],
+      "default": "normal"
+    },
+    "owner_request": {"type": "string", "minLength": 10},
+    "constraints": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "success_criteria": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "budget_usd": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1000,
+      "default": 20.0
+    }
+  }
+}

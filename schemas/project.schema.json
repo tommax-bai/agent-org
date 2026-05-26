@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-org/schemas/project.schema.json",
+  "title": "Project",
+  "description": "projects/<project>/project.yaml 的格式(v2.4:含 is_orchestrator 约束)",
+  "type": "object",
+  "required": ["project_id", "name", "roles", "role_groups"],
+  "additionalProperties": false,
+  "properties": {
+    "project_id": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+    "name": {"type": "string"},
+    "repo_url": {"type": "string"},
+    "main_branch": {"type": "string", "default": "main"},
+    "local_main_path": {"type": "string"},
+    "worktree_root": {"type": "string"},
+    "commands": {
+      "type": "object",
+      "additionalProperties": {"type": "string"}
+    },
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["role_id"],
+        "additionalProperties": false,
+        "properties": {
+          "role_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "description": {"type": "string"},
+          "is_orchestrator": {"type": "boolean", "default": false}
+        }
+      },
+      "description": "v2.4 硬约束:恰好一个 role 标 is_orchestrator: true(在代码层 validate,JSON schema 表达不了 exactly-one)"
+    },
+    "role_groups": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["roles"],
+        "properties": {
+          "description": {"type": "string"},
+          "roles": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string"}
+          }
+        }
+      }
+    },
+    "protected_paths": {
+      "type": "object",
+      "properties": {
+        "hard_block": {"type": "array", "items": {"type": "string"}},
+        "approval_required": {"type": "array", "items": {"type": "string"}},
+        "warn_only": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}

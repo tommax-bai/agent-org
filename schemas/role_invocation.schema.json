@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-org/schemas/role_invocation.schema.json",
+  "title": "RoleInvocation",
+  "description": "role_invocation_protocol(v2.0,v2.4 artifact 加 attempt)",
+  "definitions": {
+    "context_pack": {
+      "type": "object",
+      "properties": {
+        "task_context": {"type": "object"},
+        "business_goal": {"type": "string"},
+        "success_criteria": {"type": "array", "items": {"type": "string"}},
+        "related_artifacts": {
+          "type": "array",
+          "items": {"$ref": "#/definitions/artifact"}
+        },
+        "project_memory": {"type": "object"},
+        "role_specific_data": {"type": "object"},
+        "previous_violation": {
+          "type": ["object", "null"],
+          "description": "validator retry 时填,告诉 LLM 上次错在哪",
+          "properties": {
+            "violation_type": {"type": "string"},
+            "detail": {"type": "string"},
+            "expected_action": {"type": "string"}
+          }
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["type", "content", "artifact_id"],
+      "properties": {
+        "type": {"type": "string"},
+        "content": {"type": "object"},
+        "artifact_id": {"type": "string"},
+        "attempt": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "v2.4:同 (subtask, role) 第几次尝试"
+        },
+        "superseded_by": {
+          "type": ["string", "null"],
+          "description": "v2.4:被哪个新 artifact_id 取代"
+        }
+      }
+    },
+    "signal": {
+      "type": "object",
+      "required": ["target", "type", "severity", "content"],
+      "properties": {
+        "target": {"type": "string"},
+        "type": {
+          "type": "string",
+          "enum": ["question", "concern", "suggestion", "collaboration_request"]
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["low", "medium", "high"]
+        },
+        "content": {"type": "string"},
+        "immediate_escalate_required": {"type": "boolean", "default": false},
+        "immediate_escalate_reason": {"type": "string"}
+      }
+    },
+    "role_invocation_input": {
+      "type": "object",
+      "required": ["task_id", "role_id", "context_pack"],
+      "properties": {
+        "task_id": {"type": "string"},
+        "subtask_id": {"type": "string"},
+        "role_id": {"type": "string"},
+        "context_pack": {"$ref": "#/definitions/context_pack"},
+        "prior_role_signals": {
+          "type": "array",
+          "items": {"$ref": "#/definitions/signal"}
+        }
+      }
+    },
+    "role_invocation_output": {
+      "type": "object",
+      "required": ["role_id", "task_id", "verdict", "artifact"],
+      "properties": {
+        "role_id": {"type": "string"},
+        "task_id": {"type": "string"},
+        "subtask_id": {"type": "string"},
+        "verdict": {
+          "type": "string",
+          "enum": ["success", "needs_changes", "escalate"]
+        },
+        "artifact": {"$ref": "#/definitions/artifact"},
+        "signals_to_other_roles": {
+          "type": "array",
+          "items": {"$ref": "#/definitions/signal"}
+        },
+        "cost_used": {
+          "type": "object",
+          "properties": {
+            "llm_tokens": {"type": "integer", "minimum": 0},
+            "duration_ms": {"type": "integer", "minimum": 0},
+            "usd": {"type": "number", "minimum": 0}
+          }
+        }
+      }
+    }
+  }
+}

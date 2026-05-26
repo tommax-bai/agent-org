@@ -1,0 +1,56 @@
+project_id: example-api
+name: Example API
+repo_url: git@github.com:owner/example-api.git
+main_branch: main
+
+# Phase 0 占位,Phase 2 真用
+local_main_path: /srv/agent-projects/main/example-api
+worktree_root: /srv/agent-projects/worktrees/example-api
+
+commands:
+  install: pnpm install
+  test: pnpm test
+  lint: pnpm lint
+
+# v2.4 方案 Y:所有角色都是 Owner 配,framework 不预设
+# 唯一硬约束:恰好一个 is_orchestrator: true
+roles:
+  - role_id: pm
+    description: "业务拆解 + 角色调度(任务编排者)"
+    is_orchestrator: true
+  - role_id: developer
+    description: "代码实现"
+  - role_id: reviewer
+    description: "产物审查 + 质量评估"
+
+# 任务类型 → 默认角色组(PM 起点,可加减)
+role_groups:
+  simple_feature:
+    description: "简单 CRUD、明确需求"
+    roles: [developer, reviewer]
+  complex_feature:
+    description: "涉及多模块、需要系统设计"
+    roles: [developer, reviewer]      # example-api 没配 architect,简化
+  bug_fix:
+    description: "Bug 修复"
+    roles: [developer, reviewer]
+  refactor:
+    description: "重构、性能优化"
+    roles: [developer, reviewer]
+
+# 三级 protected paths(Phase 2 才真生效)
+protected_paths:
+  hard_block:
+    - .env
+    - .env.*
+    - secrets/
+    - private_keys/
+    - .github/workflows/deploy.yml
+  approval_required:
+    - package.json
+    - pnpm-lock.yaml
+    - Dockerfile
+    - migrations/
+  warn_only:
+    - README.md
+    - docs/

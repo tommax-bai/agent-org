@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Validate schemas + module boundaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        run: |
+          uv pip install --system check-jsonschema import-linter pyyaml
+
+      - name: Validate task.yaml
+        run: |
+          if compgen -G "tasks/inbox/*.yaml" > /dev/null; then
+            check-jsonschema --schemafile schemas/task.schema.json tasks/inbox/*.yaml
+          fi
+
+      - name: Validate project.yaml
+        run: |
+          for p in projects/*/project.yaml; do
+            check-jsonschema --schemafile schemas/project.schema.json "$p"
+          done
+
+      - name: Validate dispatch_policy.yaml
+        run: |
+          for p in projects/*/dispatch_policy.yaml; do
+            check-jsonschema --schemafile schemas/dispatch_policy.schema.json "$p"
+          done
+
+      - name: Validate role.yaml
+        run: |
+          for p in $(find examples/role_templates projects/*/roles -name role.yaml 2>/dev/null); do
+            check-jsonschema --schemafile schemas/role.schema.json "$p"
+          done
+
+      - name: Self-validate JSON Schemas
+        run: |
+          python3 -c "
+          import json
+          from pathlib import Path
+          from jsonschema import Draft7Validator
+          errors = 0
+          for p in Path('schemas').rglob('*.schema.json'):
+              try:
+                  Draft7Validator.check_schema(json.loads(p.read_text()))
+                  print(f'  OK  {p}')
+              except Exception as e:
+                  print(f'  ERROR {p}: {e}')
+                  errors += 1
+          if errors:
+              exit(1)
+          "
+
+      - name: Parse all YAML
+        run: |
+          python3 -c "
+          import yaml
+          from pathlib import Path
+          errors = 0
+          for p in Path('.').rglob('*.yaml'):
+              if '.venv' in str(p) or '.github' in str(p): continue
+              try:
+                  yaml.safe_load(p.read_text())
+              except yaml.YAMLError as e:
+                  print(f'  ERROR {p}: {e}')
+                  errors += 1
+          if errors:
+              exit(1)
+          "
+
+      - name: Module boundaries (import-linter)
+        run: lint-imports --config importlinter.cfg
+
+      - name: Python syntax check
+        run: |
+          python3 -m compileall -q orchestrator/ scripts/

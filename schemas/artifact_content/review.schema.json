@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-org/schemas/artifact_content/review.schema.json",
+  "title": "ReviewArtifactContent",
+  "description": "Reviewer 类角色产物(v2.4:must_escalate_to_owner + escalation_reason)",
+  "type": "object",
+  "required": [
+    "verdict",
+    "must_escalate_to_owner",
+    "correctness_score",
+    "design_quality_score",
+    "test_coverage",
+    "blocking_issues"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": ["approve", "request_changes", "reject"]
+    },
+    "must_escalate_to_owner": {
+      "type": "boolean",
+      "description": "v2.4:替代 security_or_data_loss_risk。一票否决:true 时上层 verdict 必须 escalate"
+    },
+    "escalation_reason": {
+      "type": "string",
+      "description": "v2.4:must_escalate_to_owner=true 时必填(role runner 校验)"
+    },
+    "correctness_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10
+    },
+    "design_quality_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10
+    },
+    "test_coverage": {
+      "type": "string",
+      "enum": ["adequate", "inadequate", "not_applicable"]
+    },
+    "blocking_issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["issue", "required_fix"],
+        "properties": {
+          "file": {"type": "string"},
+          "line": {"type": "integer", "minimum": 1},
+          "issue": {"type": "string"},
+          "required_fix": {"type": "string"}
+        }
+      }
+    },
+    "non_blocking_issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["issue"],
+        "properties": {
+          "issue": {"type": "string"},
+          "suggestion": {"type": "string"}
+        }
+      }
+    },
+    "suggested_fixes": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"must_escalate_to_owner": {"const": true}}
+      },
+      "then": {
+        "required": ["escalation_reason"],
+        "properties": {
+          "escalation_reason": {"minLength": 1},
+          "verdict": {"const": "reject"}
+        }
+      }
+    }
+  ]
+}

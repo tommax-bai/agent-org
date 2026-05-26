@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-org/schemas/dispatch_policy.schema.json",
+  "title": "DispatchPolicy",
+  "description": "projects/<project>/dispatch_policy.yaml(v2.2 新增,v2.4 沿用)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "mandatory_role_rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "require_roles"],
+        "properties": {
+          "id": {"type": "string"},
+          "if_any": {
+            "type": "object",
+            "properties": {
+              "task_contains": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "paths_match": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            }
+          },
+          "require_roles": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string"}
+          },
+          "require_approval_gate": {"type": "boolean", "default": false}
+        }
+      }
+    },
+    "pm_deviation_policy": {
+      "type": "object",
+      "properties": {
+        "can_add_roles": {"type": "boolean", "default": true},
+        "can_remove_template_roles": {"type": "boolean", "default": true},
+        "cannot_remove_mandatory_roles": {"type": "boolean", "default": true},
+        "removing_template_role_requires_signal": {"type": "boolean", "default": true},
+        "adding_non_template_role_requires_dispatch_note": {"type": "boolean", "default": true}
+      }
+    },
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["rule_id", "rationale"],
+        "properties": {
+          "rule_id": {"type": "string"},
+          "skip_if_any": {
+            "type": "object",
+            "properties": {
+              "task_contains": {"type": "array", "items": {"type": "string"}}
+            }
+          },
+          "rationale": {"type": "string"}
+        }
+      }
+    },
+    "retry_limits": {
+      "type": "object",
+      "description": "v2.4:retry 上限可配",
+      "properties": {
+        "pm_validator_retry_max": {"type": "integer", "minimum": 0, "maximum": 3, "default": 1},
+        "role_attempt_max": {"type": "integer", "minimum": 1, "maximum": 5, "default": 2}
+      }
+    }
+  }
+}

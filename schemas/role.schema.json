@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-org/schemas/role.schema.json",
+  "title": "Role",
+  "description": "roles/<role>/role.yaml 的格式",
+  "type": "object",
+  "required": ["role_id", "version", "name", "description", "artifact_type"],
+  "additionalProperties": false,
+  "properties": {
+    "role_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "snake_case 标识符"
+    },
+    "version": {"type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "name": {"type": "string", "minLength": 1},
+    "description": {"type": "string", "minLength": 1},
+    "is_orchestrator": {
+      "type": "boolean",
+      "default": false,
+      "description": "v2.4:framework 唯一硬约束。project.yaml 里恰好一个角色标 true(担任 PM 职责)"
+    },
+    "model_policy": {
+      "type": "object",
+      "properties": {
+        "preferred": {"type": "string"},
+        "fallback": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "artifact_type": {
+      "type": "string",
+      "description": "对应 schemas/artifact_content/<type>.schema.json"
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "required": {"type": "array", "items": {"type": "string"}},
+        "optional": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "properties": {
+        "required": {"type": "array", "items": {"type": "string"}},
+        "optional": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "safety": {
+      "type": "object",
+      "properties": {
+        "forbidden": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "budget": {
+      "type": "object",
+      "properties": {
+        "per_invocation_usd_max": {"type": "number", "minimum": 0}
+      }
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-org/schemas/artifact_content/code.schema.json",
+  "title": "CodeArtifactContent",
+  "description": "Developer 类角色产物。Phase 0/1: proposed_changes;Phase 2+: 真改文件",
+  "type": "object",
+  "required": ["summary"],
+  "additionalProperties": false,
+  "properties": {
+    "summary": {"type": "string", "minLength": 1},
+    "proposed_changes": {
+      "description": "Phase 0/1 用:描述改动但不真改",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "operation", "description"],
+        "properties": {
+          "file": {"type": "string"},
+          "operation": {"type": "string", "enum": ["create", "modify", "delete"]},
+          "description": {"type": "string"},
+          "diff": {"type": "string"}
+        }
+      }
+    },
+    "changed_files": {
+      "description": "Phase 2+ 用:真改后的文件清单",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "change_type"],
+        "properties": {
+          "path": {"type": "string"},
+          "change_type": {"type": "string", "enum": ["create", "modify", "delete"]},
+          "reason": {"type": "string"}
+        }
+      }
+    },
+    "proposed_commands": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "commands_run": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["command"],
+        "properties": {
+          "command": {"type": "string"},
+          "exit_code": {"type": "integer"},
+          "output_summary": {"type": "string"}
+        }
+      }
+    },
+    "tests_added": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {"type": "string"},
+          "purpose": {"type": "string"}
+        }
+      }
+    },
+    "tests_run": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "command": {"type": "string"},
+          "result": {"type": "string", "enum": ["pass", "fail", "skipped"]}
+        }
+      }
+    },
+    "risks": {"type": "array", "items": {"type": "string"}},
+    "known_risks": {"type": "array", "items": {"type": "string"}},
+    "followups": {"type": "array", "items": {"type": "string"}}
+  }
+}

@@ -1,0 +1,75 @@
+case_id: case_001_simple_bugfix
+description: |
+  PM 对一个常规 bug_fix 任务的拆解(login timeout 修复)。
+  期望:单 subtask,task_type=bug_fix,role_sequence=[developer, reviewer]
+tags: [bug_fix, simple, single_subtask, easy]
+difficulty: easy
+
+input:
+  task_id: test-pm-001
+  role_id: pm
+  context_pack:
+    task_context:
+      title: "Fix login timeout"
+      owner_request: |
+        修复登录接口偶发 timeout 的问题,并补充测试。
+
+        现象:用户在网络较差时,登录请求会偶发 30 秒后才返回。
+        期望:超时机制更合理(5-10 秒),并加上重试。
+      success_criteria:
+        - "相关测试通过"
+        - "reviewer 通过"
+        - "timeout 配置 5-10s 生效"
+      constraints:
+        - "不允许修改数据库 schema"
+        - "不允许改动认证协议"
+      budget_usd: 20.0
+    project_context:
+      roles: [pm, developer, reviewer, architect, security_reviewer]
+      role_groups:
+        simple_feature:
+          description: "简单 CRUD、明确需求"
+          roles: [developer, reviewer]
+        complex_feature:
+          description: "涉及多模块、需要系统设计"
+          roles: [architect, developer, reviewer]
+        bug_fix:
+          description: "Bug 修复"
+          roles: [developer, reviewer]
+        refactor:
+          roles: [architect, developer, reviewer]
+        integration_feature:
+          roles: [architect, developer, security_reviewer, reviewer]
+    dispatch_policy:
+      mandatory_role_rules: []
+      pm_deviation_policy:
+        can_add_roles: true
+        can_remove_template_roles: true
+        cannot_remove_mandatory_roles: true
+        removing_template_role_requires_signal: true
+        adding_non_template_role_requires_dispatch_note: true
+    previous_violation: null
+  prior_role_signals: []
+
+expected:
+  verdict: success
+  artifact:
+    type: dispatch_plan
+    content:
+      business_breakdown:
+        - subtask_id_pattern: "^subtask-\\d+$"
+          task_type: bug_fix
+          role_sequence:
+            - {step: 1, role_id: developer}
+            - {step: 2, role_id: reviewer}
+      role_dispatch_notes: []   # 没偏离模板
+      confidence_range: [0.75, 1.0]
+  signals_to_other_roles: []
+
+forbidden:
+  - "verdict=escalate"
+  - "verdict=needs_changes"
+  - "role_sequence 含 architect"     # 简单 bug 不该用 architect
+  - "role_sequence 含 security_reviewer"
+  - "subtask_count > 2"               # 不该过度拆解
+  - "role_dispatch_notes 非空"         # 没偏离模板就不该填

@@ -1,0 +1,71 @@
+case_id: case_002_complex_feature
+description: |
+  PM 对一个需要系统设计 + 多 subtask + 依赖关系的 complex_feature 任务的拆解。
+  期望:2-3 个 subtask,有 dependencies,包含 architect
+tags: [complex_feature, multi_subtask, dependencies, medium]
+difficulty: medium
+
+input:
+  task_id: test-pm-002
+  role_id: pm
+  context_pack:
+    task_context:
+      title: "添加用户通知中心(站内信 + 邮件)"
+      owner_request: |
+        加一个通知中心功能:
+        - 用户能在站内看通知列表(已读/未读)
+        - 重要通知同时发邮件
+        - 通知来源:订单状态变化、系统公告、运营推送
+
+        前后端都要改。需要 DB 加新表存通知。
+      success_criteria:
+        - "用户能在站内看到通知列表"
+        - "重要通知能收到邮件"
+        - "数据库 migration 安全(可回滚)"
+        - "测试覆盖站内信 + 邮件两路径"
+      constraints:
+        - "邮件用现有的 mail-service,不引入新依赖"
+      budget_usd: 20.0
+    project_context:
+      roles: [pm, developer, reviewer, architect, security_reviewer]
+      role_groups:
+        simple_feature: {roles: [developer, reviewer]}
+        complex_feature: {roles: [architect, developer, reviewer]}
+        bug_fix: {roles: [developer, reviewer]}
+        refactor: {roles: [architect, developer, reviewer]}
+        integration_feature: {roles: [architect, developer, security_reviewer, reviewer]}
+    dispatch_policy:
+      mandatory_role_rules:
+        - id: data_loss_risk
+          if_any:
+            task_contains: [migration, drop table, schema change]
+          require_roles: [architect, reviewer]
+          require_approval_gate: true
+      pm_deviation_policy:
+        can_add_roles: true
+        can_remove_template_roles: true
+        cannot_remove_mandatory_roles: true
+    previous_violation: null
+  prior_role_signals: []
+
+expected:
+  verdict: success
+  artifact:
+    type: dispatch_plan
+    content:
+      business_breakdown_min_count: 2
+      business_breakdown_max_count: 4
+      contains_subtask_with_role_sequence:
+        - role_sequence:
+            - {step: 1, role_id: architect}
+            - {step: 2, role_id: developer}
+            - {step: 3, role_id: reviewer}
+      has_dependencies: true
+      confidence_range: [0.65, 0.95]
+  signals_to_other_roles_max: 1
+
+forbidden:
+  - "verdict=escalate"
+  - "subtask_count > 5"
+  - "无 architect 角色出现"            # 复杂任务必须有 architect
+  - "无 dependencies"                  # 多 subtask 应该有依赖关系

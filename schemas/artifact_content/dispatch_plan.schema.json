@@ -1,0 +1,7 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-org/schemas/artifact_content/dispatch_plan.schema.json",
+  "title": "DispatchPlanArtifactContent",
+  "description": "PM 类角色产物。引用 pm_dispatch_plan.schema.json(同一结构,放这里是为了 artifact_content 子目录完整)",
+  "$ref": "../pm_dispatch_plan.schema.json"
+}
