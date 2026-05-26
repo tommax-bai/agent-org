@@ -23,7 +23,7 @@ dependencies = [
     "python-dotenv>=1.0",              # .env 加载
 
     # 观测层
-    "langfuse>=2.0",                   # LLM trace + cost(0C 之后用)
+    "langfuse>=2,<3",                  # LLM trace + cost(钉 v2 — server v2 + SDK v2 配套)
     "structlog>=24.0",                 # 结构化日志(0B 用)
 
     # 工具

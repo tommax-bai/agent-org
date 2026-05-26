@@ -33,6 +33,32 @@ def _load_dotenv() -> None:
 _load_dotenv()
 
 
+def _ensure_localhost_no_proxy() -> None:
+    """若用户机器开了 HTTP 代理(国内常见),把 localhost / 127.0.0.1 加进 NO_PROXY。
+
+    背景:
+      - LLM(Claude / Qwen 国外节点)需要走代理
+      - Postgres / Langfuse 跑在本机 localhost,**不能**走代理(代理会拒/伪造响应)
+    httpx 默认读 HTTP_PROXY / HTTPS_PROXY,我们这里补 NO_PROXY 把本机地址豁免。
+    """
+    extra = "localhost,127.0.0.1,::1"
+    current = os.environ.get("NO_PROXY", "") or os.environ.get("no_proxy", "")
+    if not current:
+        os.environ["NO_PROXY"] = extra
+        os.environ["no_proxy"] = extra
+        return
+    # 已有 NO_PROXY,确保 localhost 在里面
+    items = {x.strip() for x in current.split(",")}
+    for needed in ("localhost", "127.0.0.1", "::1"):
+        if needed not in items:
+            current = current + "," + needed
+    os.environ["NO_PROXY"] = current
+    os.environ["no_proxy"] = current
+
+
+_ensure_localhost_no_proxy()
+
+
 StorageBackend = Literal["file", "postgres"]
 
 

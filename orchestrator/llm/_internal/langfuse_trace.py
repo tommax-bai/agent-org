@@ -27,7 +27,12 @@ _LANGFUSE_TRIED = False
 
 
 def _get_langfuse() -> Any | None:
-    """惰性初始化。返回 None 表示 Langfuse 未配置或加载失败。"""
+    """惰性初始化。返回 None 表示 Langfuse 未配置或加载失败。
+
+    给 Langfuse 传一个 trust_env=False 的 httpx client,避免国内开发机的
+    HTTP_PROXY / macOS 系统代理把 localhost:3000 走代理拐弯(LLM 调用走代理
+    不受影响,因为 LLM 用的是另外的 httpx 实例)。
+    """
     global _LANGFUSE_CLIENT, _LANGFUSE_TRIED
     if _LANGFUSE_TRIED:
         return _LANGFUSE_CLIENT
@@ -39,13 +44,22 @@ def _get_langfuse() -> Any | None:
         return None
 
     try:
+        import httpx
         from langfuse import Langfuse
     except ImportError:
         return None
 
     host = os.environ.get("LANGFUSE_HOST", "http://localhost:3000")
     try:
-        _LANGFUSE_CLIENT = Langfuse(public_key=public_key, secret_key=secret_key, host=host)
+        # trust_env=False:完全忽略 HTTP_PROXY / HTTPS_PROXY / 系统代理
+        # 因为 Langfuse 通常是 localhost(self-hosted)或者公网直连,不该走代理
+        direct_client = httpx.Client(trust_env=False, timeout=20)
+        _LANGFUSE_CLIENT = Langfuse(
+            public_key=public_key,
+            secret_key=secret_key,
+            host=host,
+            httpx_client=direct_client,
+        )
     except Exception:
         _LANGFUSE_CLIENT = None
     return _LANGFUSE_CLIENT
