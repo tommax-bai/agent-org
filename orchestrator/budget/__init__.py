@@ -1,6 +1,5 @@
-"""预算追踪。任务级硬上限,超过强制 ESCALATED_TO_OWNER。
+"""预算追踪。任务级硬上限,超过强制 ESCALATED_TO_OWNER。"""
 
-public API(Phase 0B 待填):
-    track_cost(task_id, usd) -> RunningTotal
-    check_budget(task_id) -> bool  # False 表示超限
-"""
+from orchestrator.budget._internal.tracker import add_cost, is_over_budget, remaining_budget
+
+__all__ = ["add_cost", "is_over_budget", "remaining_budget"]

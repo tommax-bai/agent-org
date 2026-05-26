@@ -1,8 +1,10 @@
-"""事件日志(append-only)。0B 写 jsonl 文件,0C+ 写 Postgres task_events 表。
+"""事件日志(append-only)。Phase 0B 写 jsonl,Phase 0C+ 写 Postgres task_events 表。"""
 
-事件类型枚举见 schemas/event.schema.json。
+from orchestrator.event_log._internal.jsonl_writer import (
+    events_file,
+    read_events,
+    runs_dir,
+    write_event,
+)
 
-public API(Phase 0B 待填):
-    write_event(task_id, event_type, actor, payload) -> None
-    read_events(task_id) -> list[Event]
-"""
+__all__ = ["write_event", "read_events", "events_file", "runs_dir"]
