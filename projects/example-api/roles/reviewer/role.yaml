@@ -6,7 +6,7 @@ description: 审查 Developer / Architect 的产物,输出结构化 review。
 is_orchestrator: false
 
 model_policy:
-  preferred: claude-sonnet-4-5
+  preferred: qwen-plus
   fallback: []
 
 artifact_type: review

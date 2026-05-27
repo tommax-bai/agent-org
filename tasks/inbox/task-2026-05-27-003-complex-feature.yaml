@@ -1,0 +1,25 @@
+task_id: task-2026-05-27-003
+title: Add user notification center (in-app + email)
+project_id: example-api
+priority: high
+
+owner_request: |
+  加用户通知中心:
+  - 用户能在站内看通知列表(已读/未读)
+  - 重要通知同时发邮件
+  - 通知来源:订单状态变化、系统公告、运营推送
+
+  涉及:DB 加新表 notifications,后端 API,前端 UI 入口。
+
+constraints:
+  - 邮件用现有 mail-service,不引入新依赖
+  - migration 必须可回滚
+
+success_criteria:
+  - 用户登录后能看到通知列表
+  - 重要通知能收到邮件
+  - 已读/未读状态正确
+  - migration 可以 down 不丢数据
+  - 测试覆盖站内信 + 邮件两路径
+
+budget_usd: 25.0

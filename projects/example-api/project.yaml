@@ -18,6 +18,8 @@ roles:
   - role_id: pm
     description: "业务拆解 + 角色调度(任务编排者)"
     is_orchestrator: true
+  - role_id: architect
+    description: "系统设计(复杂任务用)"
   - role_id: developer
     description: "代码实现"
   - role_id: reviewer
@@ -30,13 +32,13 @@ role_groups:
     roles: [developer, reviewer]
   complex_feature:
     description: "涉及多模块、需要系统设计"
-    roles: [developer, reviewer]      # example-api 没配 architect,简化
+    roles: [architect, developer, reviewer]
   bug_fix:
     description: "Bug 修复"
     roles: [developer, reviewer]
   refactor:
     description: "重构、性能优化"
-    roles: [developer, reviewer]
+    roles: [architect, developer, reviewer]
 
 # 三级 protected paths(Phase 2 才真生效)
 protected_paths:

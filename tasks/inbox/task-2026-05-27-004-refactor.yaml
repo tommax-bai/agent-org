@@ -1,0 +1,23 @@
+task_id: task-2026-05-27-004
+title: Refactor order service - extract payment module
+project_id: example-api
+priority: normal
+
+owner_request: |
+  order service 现在 5000+ 行,把支付相关逻辑(创建支付单 / 支付回调 / 退款 / 对账)
+  拆到独立的 payment module。
+
+  重构,不改对外行为。
+
+constraints:
+  - 不改对外 API 契约(已有 client 在用)
+  - 不修改数据库 schema
+  - 现有所有测试必须继续通过(行为不变)
+
+success_criteria:
+  - payment 逻辑全部在新 payment module 里
+  - order service 不再直接处理支付细节
+  - 现有测试 100% 通过
+  - 单元测试覆盖率不下降
+
+budget_usd: 30.0

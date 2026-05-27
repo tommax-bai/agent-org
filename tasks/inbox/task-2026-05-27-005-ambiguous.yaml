@@ -1,0 +1,14 @@
+task_id: task-2026-05-27-005
+title: Improve registration flow
+project_id: example-api
+priority: low
+
+# 故意模糊:测 PM 怎么处理(confidence 应该低 + 多 assumptions + 可能 escalate)
+owner_request: |
+  注册流程现在不太好用,优化下。
+
+constraints: []
+
+success_criteria: []
+
+budget_usd: 10.0

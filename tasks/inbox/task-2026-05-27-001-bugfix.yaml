@@ -1,0 +1,22 @@
+task_id: task-2026-05-27-001
+title: Fix duplicate user registration race condition
+project_id: example-api
+priority: normal
+
+owner_request: |
+  注册接口在并发请求下偶发同邮箱重复注册 bug,需要修复。
+
+  现象:用户在网络重试或多 tab 同时提交时,产生 2 个相同 email 的账号。
+  期望:用数据库唯一约束 + 应用层互斥,确保同 email 只能注册一次。
+  补充测试覆盖并发场景。
+
+constraints:
+  - 不允许修改邮箱字段的 schema(只能加 index / constraint)
+  - 不允许引入新的依赖(用现有 ORM / 数据库)
+
+success_criteria:
+  - 并发注册测试不再产生重复账号
+  - 已有正常注册流程不受影响
+  - 错误信息对用户友好(不是数据库层报错)
+
+budget_usd: 15.0

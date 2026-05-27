@@ -127,27 +127,63 @@ class RoleRunner(ABC):
             + yaml.safe_dump(ctx, allow_unicode=True, sort_keys=False)
             + "```"
             + signals_yaml
-            + "\n\n请按 system prompt 第 3 节的 output schema,输出完整的 YAML(不要 wrap 在 code fence 里)。"
+            + "\n\n请按 system prompt 第 3 节的 output schema,**输出一个完整的 JSON 对象**。"
+            + "\n\n要求:\n"
+            + "- **只输出一个 JSON object,从 `{` 开始 `}` 结束**,不要 wrap 在 ```json 代码块里\n"
+            + "- 不要在 JSON 前后加任何解释 / markdown / 标题\n"
+            + "- 字符串必须用 \" 包起来;含特殊字符的字符串用 \\n / \\\" / \\\\ 转义\n"
+            + "- 大段文本(如 description / diff / blocking_issue)写成单个 JSON 字符串,内部用 \\n 拼接\n"
+            + "- 不要把 markdown 代码块标记 ` 写进 JSON value 里(那是 YAML 失败的常见原因)"
         )
 
     def _parse_output(self, raw: str) -> dict[str, Any]:
-        """解析 LLM 输出为 dict。容错处理 code fence wrap。"""
+        """解析 LLM 输出为 dict。
+
+        策略:
+        1. 去掉 code fence(```json / ```yaml / ``` 都去)
+        2. **先试 JSON**(更严格,失败信息更明确;字符串必须 quoted,不会被 : / ' 坑)
+        3. JSON 失败再 fallback YAML(LLM 没听话也能 parse)
+        4. 都不行 → RoleExecutionError("parse")
+        """
         text = raw.strip()
         if text.startswith("```"):
-            # 去掉 code fence
             lines = text.split("\n")
             if lines[0].startswith("```"):
                 lines = lines[1:]
             if lines and lines[-1].strip() == "```":
                 lines = lines[:-1]
-            text = "\n".join(lines)
+            text = "\n".join(lines).strip()
+
+        # 1. JSON 优先
+        json_err: Exception | None = None
+        if text.startswith("{") or text.startswith("["):
+            try:
+                import json as _json
+
+                parsed = _json.loads(text)
+                if isinstance(parsed, dict):
+                    return parsed
+                raise RoleExecutionError(
+                    "parse", f"JSON 解析后不是 dict,got {type(parsed).__name__}"
+                )
+            except RoleExecutionError:
+                raise
+            except Exception as e:
+                json_err = e
+
+        # 2. YAML fallback
         try:
             parsed = yaml.safe_load(text)
-        except yaml.YAMLError as e:
-            raise RoleExecutionError("yaml_parse", f"LLM 输出不是合法 YAML: {e}") from e
+        except yaml.YAMLError as yaml_err:
+            err_msg = "LLM 输出既不是合法 JSON 也不是合法 YAML。"
+            if json_err:
+                err_msg += f"\n  JSON 错误:{json_err}"
+            err_msg += f"\n  YAML 错误:{yaml_err}"
+            raise RoleExecutionError("parse", err_msg) from yaml_err
+
         if not isinstance(parsed, dict):
             raise RoleExecutionError(
-                "yaml_parse", f"LLM 输出不是 dict,got {type(parsed).__name__}"
+                "parse", f"LLM 输出解析后不是 dict,got {type(parsed).__name__}"
             )
         return parsed
 
@@ -228,7 +264,16 @@ class RoleRunner(ABC):
         signals_raw = parsed.get("signals_to_other_roles", []) or []
         from orchestrator._shared import Signal
 
-        signals = [Signal(**s) for s in signals_raw]
+        try:
+            signals = [Signal(**s) for s in signals_raw]
+        except Exception as e:
+            # LLM 经常把 target 写成 role_id / from / to,或漏 type 字段
+            raise RoleExecutionError(
+                "signal_schema",
+                f"signals_to_other_roles 字段格式错: {e}。"
+                f"每个 signal 必须含 target(被发的角色 id)+ type"
+                f"(question|concern|suggestion|collaboration_request)+ severity + content",
+            ) from e
         return RoleInvocationOutput(
             role_id=inp.role_id,
             task_id=inp.task_id,
@@ -240,10 +285,21 @@ class RoleRunner(ABC):
         )
 
     def _append_retry_context(self, msg: str, err: RoleExecutionError) -> str:
+        hint = ""
+        if "signals_to_other_roles" in err.detail and "Additional properties" in err.detail:
+            hint = (
+                "\n\n**修复方法**:把 signals_to_other_roles 从 artifact.content 里**移出来**,"
+                "放在顶层(跟 verdict / artifact 同级):\n"
+                "```json\n"
+                '{ "verdict": "...", "artifact": {...无 signals...}, '
+                '"signals_to_other_roles": [...] }\n'
+                "```"
+            )
         return (
             msg
             + "\n\n"
-            + "上一次输出有问题,请修正后重新输出完整 YAML:\n"
+            + "上一次输出有问题,请修正后重新输出完整 **JSON**:\n"
             + f"- 错误类型:{err.kind}\n"
             + f"- 详细:{err.detail}\n"
+            + hint
         )
