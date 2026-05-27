@@ -76,40 +76,67 @@ openspec/specs/                            归档的 capability spec(OpenSpec ar
 
 ---
 
-## 变更工作流(Phase 3+ 用 OpenSpec)
+## 开发规则:基于 OpenSpec(Phase 3 起强制)
 
-Phase 0A-2 用 commit message + design-history 记录变更。**Phase 3 起**,跨架构层的
-新功能(多文件 / 跨模块 / 新基础设施)走 OpenSpec workflow:
+**所有跨架构层 / 跨模块 / 引入新 capability 的改动,MUST 先写 OpenSpec change,
+proposal/design/specs/tasks 4 个 artifact 全过 validate,Owner 看完批准,再开始 implement**。
+
+不允许"先写代码,事后补 spec"。
+
+### 强制走 OpenSpec 的场景
+
+- 跨多个 orchestrator/ 子模块的功能(如 PR 生成 / 记忆系统 / executor 改造)
+- 新增 capability(`openspec/specs/<name>/spec.md` 没有就是新)
+- 改动会让 spec 行为变(MODIFIED Requirements)
+- 引入新外部依赖 / 新基础设施(docker service / SDK / 外部 API)
+- 用户提的新需求需要 pre-implementation review
+
+### 可以直接 commit(不走 OpenSpec)
+
+- 单文件 bug fix / prompt 文本调优
+- 重构(行为不变)
+- 文档错别字 / 格式调整
+- 现有 OpenSpec change 的 tasks 在 implement 中(已经在 change 里了,不要重复包一层)
+
+### 标准流程
 
 ```bash
-# 1. 创建 change(kebab-case 名字)
+# 1. 创建 change(kebab-case)
 npx -y @fission-ai/openspec new change <name>
 
-# 2. 写 4 个 artifact(看 .github/skills/openspec-*/SKILL.md 模板)
-#    openspec/changes/<name>/proposal.md   # why + what
-#    openspec/changes/<name>/design.md     # how(技术决策)
-#    openspec/changes/<name>/specs/<cap>/spec.md   # ADDED/MODIFIED Requirements + scenarios
-#    openspec/changes/<name>/tasks.md      # checkbox 实施步骤
+# 2. 按顺序写 4 个 artifact(每个用 instructions 命令拿模板)
+npx -y @fission-ai/openspec instructions proposal --change <name>
+# → 写 openspec/changes/<name>/proposal.md(why + what + capabilities 划分)
+npx -y @fission-ai/openspec instructions design --change <name>
+# → 写 design.md(技术决策 + alternatives + risks)
+npx -y @fission-ai/openspec instructions specs --change <name>
+# → 写 specs/<capability>/spec.md(ADDED/MODIFIED Requirements + scenarios)
+npx -y @fission-ai/openspec instructions tasks --change <name>
+# → 写 tasks.md(checkbox 实施步骤)
 
 # 3. 验证
 npx -y @fission-ai/openspec validate <name>
-npx -y @fission-ai/openspec status --change <name>
+npx -y @fission-ai/openspec status --change <name>     # 必须 4/4 complete
 
-# 4. 实施完成后 archive
+# 4. Owner 看完批准 → 按 tasks.md 实施
+# 5. 实施完 archive
 npx -y @fission-ai/openspec archive <name>
-# → spec 文件移到 openspec/specs/<cap>/spec.md(真相源)
+# → spec 移到 openspec/specs/<cap>/spec.md(真相源)
 # → change 移到 openspec/changes/archive/<name>/
 ```
 
-**什么时候用 OpenSpec(不要每个 commit 都用)**:
-- 跨架构层的多步骤改动(Phase 3 PR 生成 / Phase 4 记忆系统等)
-- Owner 提的新 feature 需要 pre-implementation review
-- 改动会引入新 capability(新 spec 文件)
+### 新 session 开始时
 
-**什么时候直接 commit(不走 OpenSpec)**:
-- 单文件 bug fix / prompt 调优
-- 小重构
-- 文档错别字
+进入 agent-org 仓库,先看 `openspec/changes/` 下有没有 **in-flight change**:
+- 有 → 优先确认是不是要继续这个,不要并行开新 change
+- 没有 → 按用户需求判断是否需要新 change
+
+### 跟 design-history.md 的关系
+
+- **OpenSpec changes**:per-change 的完整提案 + spec delta + 实施清单(开发流程)
+- **design-history.md**:跨 change 的元层教训(已否决清单 / 设计味道警告)+ 修订历史叙事
+
+两个并存,不冗余。OpenSpec 是"做这次改动的工程文档",design-history 是"为什么这个项目长这样的叙事"。
 
 详细引入背景见 [design-history.md Part IV "OpenSpec 引入触发条件"](docs/design-history.md)。
 
