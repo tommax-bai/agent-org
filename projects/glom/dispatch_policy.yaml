@@ -1,0 +1,16 @@
+# mandatory_role_rules: glom 是公开库,不太涉及 security_sensitive 场景
+# 先简单,Phase 1 调通后再补 keyword
+mandatory_role_rules: []
+
+pm_deviation_policy:
+  can_add_roles: true
+  can_remove_template_roles: true
+  cannot_remove_mandatory_roles: true
+  removing_template_role_requires_signal: true
+  adding_non_template_role_requires_dispatch_note: true
+
+exceptions: []
+
+retry_limits:
+  pm_validator_retry_max: 1
+  role_attempt_max: 2

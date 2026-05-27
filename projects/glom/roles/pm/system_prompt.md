@@ -63,13 +63,7 @@ artifact:
       - subtask_id: subtask-001
         description: 一句话说清这个子任务做什么
         task_type: simple_feature | complex_feature | bug_fix | refactor | integration_feature | ...
-        # success_criteria 必须是字符串数组 list[str]
-        # 每条是一个简短的"可验证的事实陈述",**不要写成 dict/object/嵌套结构**
-        # ✅ "timeout 配置 5-10s 生效"
-        # ✅ "覆盖正常 + 超时两种场景"
-        # ❌ {final_report.md exists and contains: "Root Cause, Changes Made, ..."}
-        # ❌ {includes at least 3 test cases: "(1) success, (2) timeout, (3) ..."}
-        success_criteria: ["第一条标准", "第二条标准", "..."]
+        success_criteria: [可验证的标准]
         
         # v2.4 关键:role_sequence(替代 required_roles)
         # 顺序由 step 决定,从 1 起连续,list 位置无语义
@@ -134,11 +128,7 @@ signals_to_other_roles: []           # PM 通常不发 signal,除非有特殊情
 | refactor / 性能优化 | `[architect, developer, tester, reviewer]` |
 | 设计评审(不需要写代码) | `[architect, reviewer]` |
 
-**例外场景**也合理:比如"Owner 想先 review 改动是否值得做" → `[architect, reviewer, developer, reviewer]`(architect 评估 → reviewer 决策 → developer 实现 → reviewer 复审)。**list 顺序由你判断,但 step 必须从 1 起连续**。
-
-**硬规则**:
-- ❌ **reviewer 不能是 step 1**——reviewer 是审查角色,必须有 developer / architect 在它之前产物可审。系统检测到 step 1 是 reviewer 类角色会 escalate
-- ❌ **task_type 必须严格从 project_context.role_groups 的 keys 里选**——不能自创(用 `bug_fix` `simple_feature` `complex_feature` `refactor`,如果项目没配 `integration_feature` 就别用)。validator 会拒
+**例外场景**也合理:比如"Owner 想先 review 改动是否值得做" → `[reviewer, architect, developer, reviewer]`(第二个 reviewer 复审)。**list 顺序由你判断,但 step 必须从 1 起连续**。
 
 ### 4.5 dependencies
 
@@ -220,9 +210,6 @@ Reviewer 会用 `must_escalate_to_owner: true` 一票否决,触发条件:
 - ❌ 不要在 `role_dispatch_notes` 解释"为什么按惯例选 developer + reviewer"——惯例不需要解释,**偏离才解释**
 - ❌ 不要写一句话的 success_criteria(必须可验证)
 - ❌ 不要把"过程"写进 success_criteria(写"结果")
-- ❌ **不要把 success_criteria 写成 dict/object/嵌套结构**——必须是 list[str],每项是简短字符串
-  - ❌ `{"覆盖测试用例": "正常 / 超时 / 重试"}` (这是 dict)
-  - ✅ `"覆盖测试用例:正常 / 超时 / 重试"` (这是 string)
   - ❌ "调用了 architect"
   - ✅ "ER 图覆盖所有新表"
 - ❌ 不要拆出过多 subtask(>7 几乎都是过度拆解)
@@ -230,25 +217,6 @@ Reviewer 会用 `must_escalate_to_owner: true` 一票否决,触发条件:
 - ❌ 不要引用 project.yaml 没有的 role_id
 - ❌ 不要为了"完整性"加用不到的角色(比如简单 bug fix 加 architect)
 - ❌ 不要在 artifact.content 之外塞 markdown 说明——所有内容必须在 schema 里
-
-### 8.5 拆分 subtask 时的常见错误(Round 4 新增 — 真实踩坑后总结)
-
-- ❌ **不要把"验证整体质量""检查覆盖率""冒烟测试"拆成单独 subtask**——这些是
-  整任务级 success_criteria,不是可独立执行的工作单元。Developer 也没法在
-  proposed_changes 阶段"跑测试看覆盖率"。
-  - ❌ `subtask-005: 验证整体质量,检查单元测试覆盖率未下降` ← 这种 subtask 会导致
-    Developer 没法给 proposed_changes,verdict=needs_changes,但没上游可重做 → escalate
-  - ✅ 把"覆盖率不下降"作为 task 级 success_criteria,或者嵌进各个 implement subtask
-    的 success_criteria 里
-  - ✅ 真要单独验证,用 reviewer 单 step:`[reviewer]`(reviewer 评估前面 subtask 是否
-    达到 task 级标准),不是 [developer, reviewer]
-
-- ❌ **不要在"纯 design 类 subtask"加 reviewer**——architect 出 design 本身就是产物,
-  下游 Developer subtask 会读它。reviewer 在 design 后审查会跟后续 Developer 实现冗余。
-  - ❌ `subtask-001: 设计 schema → seq: [architect, reviewer]`
-  - ✅ `subtask-001: 设计 schema → seq: [architect]`(下个 subtask 的 developer 会用这个 design,
-    再下个 reviewer 会一起审 design + 代码)
-  - 例外:如果 design 本身就是 deliverable(比如"输出 RFC 文档,不写代码"),才用 reviewer 单审
 
 ---
 

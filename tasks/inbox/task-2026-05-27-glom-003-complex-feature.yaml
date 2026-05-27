@@ -1,0 +1,30 @@
+task_id: task-2026-05-27-003
+title: Add JSONPath-style filter expression to path
+project_id: glom
+priority: normal
+
+owner_request: |
+  支持类 JSONPath 过滤语法在 path 中:
+    glom(data, 'users[?(@.age > 18)].name')
+    # 返回所有 age > 18 的用户的 name 列表
+
+  目前 glom 只支持 `[*]` / `[N]` / `[N:M]`,不支持条件过滤。
+
+  涉及:
+  - path parsing 加 `[?(...)]` 语法
+  - 条件 expression eval(简单 attr 比较 + and/or)
+  - 可能新文件 glom/filter.py 或扩展 core.py
+
+constraints:
+  - 只支持 attr 比较运算符:>, <, ==, !=, >=, <=
+  - 只支持 and/or 逻辑组合(no 嵌套 nesting,no callable)
+  - 不允许 Python eval(安全风险)
+
+success_criteria:
+  - "支持 single condition: [?(@.x > 5)]"
+  - "支持 and/or: [?(@.x > 5 and @.y == 'foo')]"
+  - "至少 5 个新测试覆盖各种 path"
+  - "现有测试 100% 通过"
+  - "新加 docstring 说明语法"
+
+budget_usd: 25.0

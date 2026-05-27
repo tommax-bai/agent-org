@@ -1,0 +1,24 @@
+task_id: task-2026-05-27-002
+title: Add glom.contains(target) spec
+project_id: glom
+priority: normal
+
+owner_request: |
+  加一个 `Contains` spec,检查嵌套结构是否含某个值。语义类似 Python `in`,
+  但深度递归(对 list 用 in,对 dict 检查 values)。
+
+  用法示例:
+    glom({'a': [1, 2, 3]}, ('a', Contains(2)))  # → True
+    glom({'a': {'b': 'hello'}}, Contains('hello'))  # → True
+    glom([1, 2, 3], Contains(99))  # → False
+
+constraints:
+  - 不引入新依赖
+  - 行为符合最小惊讶原则(跟 Python in 一致)
+
+success_criteria:
+  - "新加 Contains 类在 glom/core.py 或 glom/matching.py 导出"
+  - "至少 3 个新测试覆盖:命中 list / 命中 dict value / 未命中"
+  - "现有测试 100% 通过"
+
+budget_usd: 10.0

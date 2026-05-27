@@ -1,0 +1,26 @@
+task_id: task-2026-05-27-004
+title: Refactor glom/core.py _glom main function
+project_id: glom
+priority: normal
+
+owner_request: |
+  glom/core.py 是单文件 2592 行。`_glom` 主调度函数(以及它内部的 spec
+  类型 dispatch 逻辑)过长难维护。
+
+  目标:
+  - 拆 `_glom` 为更小的辅助函数(每个 ≤ 50 行)
+  - 按 spec 类型(string path / Tuple / Call / Spec / dict / list)拆分
+  - 不改对外 API 行为
+  - 现有所有测试必须继续通过(行为完全等价)
+
+constraints:
+  - 对外 API 不变(签名 / 异常类型 / 返回值)
+  - 性能不退化(simple bench:test 总耗时不增加 > 10%)
+  - 不引入新依赖
+
+success_criteria:
+  - "_glom 主体 ≤ 50 行,拆出 ≥ 3 个辅助函数"
+  - "现有 199+ 测试 100% 通过"
+  - "import 路径不变(glom.core._glom 仍然可访问)"
+
+budget_usd: 30.0

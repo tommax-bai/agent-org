@@ -1,0 +1,60 @@
+project_id: glom
+name: glom (mahmoud/glom fork)
+repo_url: git@github.com:tommax-bai/glom.git
+main_branch: master
+
+# Phase 2 启用:从 GitHub fork clone 来,不走 fixtures bootstrap
+local_main_path: .runs/repos/glom
+worktree_root: .runs/worktrees/glom
+
+# Phase 2 CI 命令(在 worktree 内跑)
+# test_cli 在 sandboxed env 失败(face binary 找不到),skip 掉
+commands:
+  test: pytest --ignore=glom/test/test_cli.py -q --no-header
+  lint: python -c "import glom; print('import OK')"
+  build: python -c "from glom import glom, Path, T; print('public API OK')"
+
+# v2.4:所有角色都是 Owner 配
+roles:
+  - role_id: pm
+    description: "业务拆解 + 角色调度(任务编排者)"
+    is_orchestrator: true
+  - role_id: architect
+    description: "系统设计(复杂任务用)"
+  - role_id: developer
+    description: "代码实现(在 worktree 真改文件)"
+  - role_id: reviewer
+    description: "产物审查 + 质量评估(看 CI 输出)"
+
+role_groups:
+  simple_feature:
+    description: "简单加方法 / 加 API"
+    roles: [developer, reviewer]
+  complex_feature:
+    description: "涉及多模块或新 spec 语法"
+    roles: [architect, developer, reviewer]
+  bug_fix:
+    description: "修 bug"
+    roles: [developer, reviewer]
+  refactor:
+    description: "重构 / 拆函数"
+    roles: [architect, developer, reviewer]
+
+# 三级 protected paths
+protected_paths:
+  hard_block:
+    - .env
+    - .env.*
+    - secrets/
+    - private_keys/
+    - .github/workflows/deploy.yml
+  approval_required:
+    - setup.py
+    - requirements.in
+    - requirements.txt
+    - pyproject.toml
+    - tox.ini
+  warn_only:
+    - README.md
+    - CHANGELOG.md
+    - docs/

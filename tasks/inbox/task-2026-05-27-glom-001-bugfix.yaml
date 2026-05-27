@@ -1,0 +1,23 @@
+task_id: task-2026-05-27-001
+title: Fix path with escaped dot raising PathAccessError
+project_id: glom
+priority: normal
+
+owner_request: |
+  glom 的 path 语法用 '.' 作分隔符。如果 key 本身含 '.'(比如 {'a.b': 1}),
+  目前没法访问。期望支持转义:`glom({'a.b': 1}, 'a\\.b')` 应返回 1,而不是
+  抛 PathAccessError。
+
+  影响范围:glom/core.py 的 path parsing 逻辑。
+  必须保持向后兼容(普通 'a.b' 仍按嵌套访问解释)。
+
+constraints:
+  - 不修改对外 API 签名(只扩展 path 语法)
+  - 现有所有测试必须继续通过
+
+success_criteria:
+  - "新加测试覆盖 escaped dot 场景且通过"
+  - "现有 199+ 测试 100% 通过(test_cli 已 skip)"
+  - "API 文档(docstring)说明 escape 用法"
+
+budget_usd: 15.0
