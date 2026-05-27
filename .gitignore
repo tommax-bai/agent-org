@@ -7,6 +7,7 @@ private_keys/
 
 # 运行时数据(不进 git)
 runs/
+.runs/                  # Phase 2 worktree + main repo bootstrap 出来的内容
 tasks/active/
 tasks/done/
 tasks/failed/

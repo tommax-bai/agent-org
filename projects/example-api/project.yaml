@@ -3,14 +3,15 @@ name: Example API
 repo_url: git@github.com:owner/example-api.git
 main_branch: main
 
-# Phase 0 占位,Phase 2 真用
-local_main_path: /srv/agent-projects/main/example-api
-worktree_root: /srv/agent-projects/worktrees/example-api
+# Phase 2 启用(从 fixtures/example-api bootstrap)
+local_main_path: .runs/repos/example-api
+worktree_root: .runs/worktrees/example-api
 
+# Phase 2 CI 命令(在 worktree 内跑)
 commands:
-  install: pnpm install
-  test: pnpm test
-  lint: pnpm lint
+  test: go test ./...
+  lint: go vet ./...
+  build: go build ./...
 
 # v2.4 方案 Y:所有角色都是 Owner 配,framework 不预设
 # 唯一硬约束:恰好一个 is_orchestrator: true
