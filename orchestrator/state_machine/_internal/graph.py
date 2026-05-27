@@ -81,7 +81,7 @@ def _build_context_pack_for_pm(state: TaskState, previous_violation: dict | None
 
 def _build_context_pack_for_role(
     state: TaskState, subtask_id: str, role_id: str
-) -> ContextPack:
+) -> tuple:
     # 找当前 subtask
     assert state.dispatch_plan is not None
     subtask = next(st for st in state.dispatch_plan.business_breakdown if st.subtask_id == subtask_id)
@@ -114,6 +114,7 @@ def _build_context_pack_for_role(
             "subtask_id": subtask_id,
             "task_type": subtask.task_type,
         },
+        worktree_path=state.worktree_path,
     ), prior  # type: ignore[return-value]
 
 
@@ -254,21 +255,118 @@ def _pm_planning(state: TaskState) -> bool:
         }
 
 
+def _mark_subtask_failed(state: TaskState, subtask_id: str, reason: str) -> None:
+    """Phase 2.6:单 subtask 失败不挂全局,只标记 failed_subtasks。
+
+    write event,但 task 状态不改为 ESCALATED_TO_OWNER(继续跑其他 ready subtask)。
+    """
+    if subtask_id not in state.failed_subtasks:
+        state.failed_subtasks.append(subtask_id)
+    write_event(
+        state.task.task_id,
+        "ESCALATED",
+        actor="orchestrator",
+        payload={"subtask_id": subtask_id, "reason": reason, "scope": "subtask"},
+    )
+
+
+def _finalize_task(state: TaskState) -> None:
+    """Phase 2.6:所有 subtask 跑完后决定终态。
+
+    DONE        : 所有 subtask 完成
+    PARTIAL     : 部分成功 + 部分失败(写到 escalation.md 让 Owner 决定)
+    ESCALATED_TO_OWNER : 全部失败
+    """
+    plan = state.dispatch_plan
+    total = len(plan.business_breakdown) if plan else 0
+    completed = len(state.completed_subtasks)
+    failed = len(state.failed_subtasks)
+
+    if total == 0 or (failed == 0 and completed == total):
+        _change_status(state, "DONE")
+    elif completed == 0:
+        # 全部失败
+        state.escalation_reason = "all_subtasks_failed"
+        state.escalation_detail = f"{total} 个 subtask 全部失败"
+        _change_status(state, "ESCALATED_TO_OWNER")
+    else:
+        # 部分成功
+        state.status = "ESCALATED_TO_OWNER"  # 状态仍走 ESCALATED 通道(没有 PARTIAL terminal)
+        state.escalation_reason = "partial_success"
+        state.escalation_detail = (
+            f"{completed}/{total} 个 subtask 完成,{failed} 个失败:{state.failed_subtasks}"
+        )
+        write_event(
+            state.task.task_id,
+            "STATE_CHANGED",
+            actor="orchestrator",
+            payload={"to": "ESCALATED_TO_OWNER", "reason": "partial_success"},
+        )
+
+
+def _subtask_done(state: TaskState, subtask_id: str) -> bool:
+    """检查 subtask 是否所有 role_sequence step 都 success 完成。"""
+    if not state.dispatch_plan:
+        return False
+    for st in state.dispatch_plan.business_breakdown:
+        if st.subtask_id != subtask_id:
+            continue
+        for s in st.role_sequence:
+            done = state.role_current_attempt_done(subtask_id, s.role_id)
+            if done is None or done.verdict != "success":
+                return False
+        return True
+    return False
+
+
 def _dispatch_loop(state: TaskState) -> None:
-    """DISPATCH 循环。直到任务完成或 escalate。"""
+    """DISPATCH 循环。直到任务完成 / 全部失败 / 预算超 / 信号 escalate。"""
     _change_status(state, "DISPATCH")
 
     max_attempt = state.policy.retry_limits.role_attempt_max
 
     while True:
-        # 预算 / 信号兜底
+        # 预算 / 信号兜底:全局失败,不是 subtask 级
         if is_over_budget(state):
             _escalate(state, "BUDGET_EXCEEDED", f"已花费 ${state.cost_used_usd:.4f} >= 预算 ${state.budget_usd:.2f}")
             return
 
+        # Phase 2.6:把已经全成功的 subtask 加进 completed_subtasks
+        if state.dispatch_plan:
+            for st in state.dispatch_plan.business_breakdown:
+                if st.subtask_id in state.completed_subtasks or st.subtask_id in state.failed_subtasks:
+                    continue
+                if _subtask_done(state, st.subtask_id):
+                    state.completed_subtasks.append(st.subtask_id)
+
         nxt = find_next_ready_role(state)
+        # find_next_ready_role 会跳过 failed_subtasks 吗?需要改 router
+        # 临时:这里再 filter 一遍
+        if nxt is not None and nxt[0] in state.failed_subtasks:
+            nxt = None  # 假装没有,触发"全部跑完"流程
+            # 找一个真的 ready 的 subtask(跳过 failed)
+            if state.dispatch_plan:
+                for st in state.dispatch_plan.business_breakdown:
+                    if st.subtask_id in state.failed_subtasks:
+                        continue
+                    if st.subtask_id in state.completed_subtasks:
+                        continue
+                    # 看依赖
+                    deps_ok = all(d in state.completed_subtasks for d in st.dependencies)
+                    if not deps_ok:
+                        continue
+                    # 找该 subtask 第一个未完成 role
+                    for s in sorted(st.role_sequence, key=lambda x: x.step):
+                        done = state.role_current_attempt_done(st.subtask_id, s.role_id)
+                        if done is None or done.verdict != "success":
+                            nxt = (st.subtask_id, s.role_id)
+                            break
+                    if nxt is not None:
+                        break
+
         if nxt is None:
-            _change_status(state, "DONE")
+            # 所有 ready 的都跑完了,看终态
+            _finalize_task(state)
             return
 
         subtask_id, role_id = nxt
@@ -285,12 +383,12 @@ def _dispatch_loop(state: TaskState) -> None:
                     "max": max_attempt,
                 },
             )
-            _escalate(
-                state,
-                "attempt_limit_reached",
-                f"subtask {subtask_id} role {role_id} 已尝试 {attempt - 1} 次,超过上限 {max_attempt}",
+            # Phase 2.6:subtask 级失败,继续跑其他 subtask
+            _mark_subtask_failed(
+                state, subtask_id,
+                f"attempt_limit_reached: role {role_id} 已尝试 {attempt - 1} 次,超过上限 {max_attempt}",
             )
-            return
+            continue
 
         write_event(
             state.task.task_id,
@@ -305,11 +403,19 @@ def _dispatch_loop(state: TaskState) -> None:
             _escalate(state, "config_error", f"role {role_id} 在 project.yaml 不存在(validator 应该已拦截?)")
             return
 
-        # 跑 role
+        # 跑 role(Phase 2:executor 类角色传 worktree + protected_paths + ci_commands)
+        worktree_path_obj = None
+        if state.worktree_path:
+            from pathlib import Path as _Path
+
+            worktree_path_obj = _Path(state.worktree_path)
         runner = make_runner(
             role_config,
             attempt=attempt,
             mock_behavior=state.task.mock_behavior,
+            worktree=worktree_path_obj,
+            protected_paths=state.project.protected_paths,
+            ci_commands=state.project.commands,
         )
         write_event(
             state.task.task_id,
@@ -328,8 +434,12 @@ def _dispatch_loop(state: TaskState) -> None:
             )
             output = runner.execute(inp, max_retries=1)
         except RoleExecutionError as e:
-            _escalate(state, f"role_runner_failed_{role_id}", f"{e.kind}: {e.detail}")
-            return
+            # Phase 2.6:role runner 失败也是 subtask 级,不挂全局
+            _mark_subtask_failed(
+                state, subtask_id,
+                f"role_runner_failed_{role_id}: {e.kind}: {e.detail}",
+            )
+            continue
 
         # 写 artifact(并 mark 老的 superseded_by)
         if attempt > 1:
@@ -379,22 +489,22 @@ def _dispatch_loop(state: TaskState) -> None:
             _change_status(state, "DISPATCH")
             continue
         if output.verdict == "escalate":
-            _escalate(
-                state,
-                f"role_escalate_{role_id}",
-                f"role {role_id} 主动 escalate(attempt={attempt})",
+            # role 主动 escalate(如 reviewer must_escalate_to_owner=true):Phase 2.6 subtask 级
+            _mark_subtask_failed(
+                state, subtask_id,
+                f"role_escalate_{role_id}: role 主动 escalate(attempt={attempt})",
             )
-            return
+            continue
         if output.verdict == "needs_changes":
             # 找上游
             upstream = find_upstream_role(state, subtask_id, role_id)
             if upstream is None:
-                _escalate(
-                    state,
-                    "needs_changes_no_upstream",
-                    f"subtask {subtask_id} role {role_id} 说 needs_changes,但它是第一个角色(无上游)",
+                # PM 拆错了(reviewer 当 step 1)— subtask 级失败,不挂全局
+                _mark_subtask_failed(
+                    state, subtask_id,
+                    f"needs_changes_no_upstream: role {role_id} 是 step 1 无上游可重做",
                 )
-                return
+                continue
             # 把上游的 completed 标记 "needs replay" — 实现:从 completed_roles 移除
             state.completed_roles = [
                 c
@@ -415,31 +525,60 @@ def run_task(state: TaskState) -> TaskState:
         payload={"title": state.task.title, "project_id": state.task.project_id},
     )
 
-    # CREATED → PM_PLANNING
-    if not _pm_planning(state):
-        return state
+    # Phase 2:任务级 worktree 创建(PM_PLANNING 前就建好,所有 role 都能用)
+    # 如果 project 没配 local_main_path / worktree_root,跳过(0B 兼容模式)
+    if state.project.local_main_path and state.project.worktree_root:
+        try:
+            from orchestrator.worktree import create_worktree
 
-    # DISPATCH 循环
-    _dispatch_loop(state)
+            wt = create_worktree(state.task.task_id, state.project)
+            state.worktree_path = str(wt)
+            write_event(
+                state.task.task_id,
+                "STATE_CHANGED",
+                actor="orchestrator",
+                payload={"worktree_created": str(wt)},
+            )
+        except Exception as e:
+            _escalate(state, "worktree_create_failed", str(e))
+            return state
 
-    # terminal event
-    if state.status == "DONE":
-        write_event(
-            state.task.task_id,
-            "TASK_COMPLETED",
-            actor="orchestrator",
-            payload={"total_cost_usd": state.cost_used_usd},
-        )
-    else:
-        write_event(
-            state.task.task_id,
-            "TASK_FAILED",
-            actor="orchestrator",
-            payload={
-                "status": state.status,
-                "reason": state.escalation_reason,
-                "total_cost_usd": state.cost_used_usd,
-            },
-        )
+    try:
+        # CREATED → PM_PLANNING
+        if not _pm_planning(state):
+            return state
+
+        # DISPATCH 循环
+        _dispatch_loop(state)
+    finally:
+        # terminal event
+        if state.status == "DONE":
+            write_event(
+                state.task.task_id,
+                "TASK_COMPLETED",
+                actor="orchestrator",
+                payload={"total_cost_usd": state.cost_used_usd},
+            )
+        else:
+            write_event(
+                state.task.task_id,
+                "TASK_FAILED",
+                actor="orchestrator",
+                payload={
+                    "status": state.status,
+                    "reason": state.escalation_reason,
+                    "total_cost_usd": state.cost_used_usd,
+                },
+            )
+        # Phase 2 cleanup worktree(默认完成清理;失败保留 debug 用 KEEP_WORKTREE env)
+        import os as _os
+
+        if state.worktree_path and not _os.environ.get("KEEP_WORKTREE"):
+            try:
+                from orchestrator.worktree import cleanup_worktree
+
+                cleanup_worktree(state.task.task_id, state.project)
+            except Exception:
+                pass
 
     return state

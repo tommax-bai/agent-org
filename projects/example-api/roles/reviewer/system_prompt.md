@@ -51,11 +51,32 @@
 ## 4. Verdict 规则(确定性,你必须遵守)
 
 ```
-must_escalate_to_owner=true           → artifact.content.verdict=reject + 顶层 verdict=escalate
-任一 CI 硬护栏失败                      → reject + escalate
-correctness < 7 或 test_coverage=inadequate → request_changes + 顶层 verdict=needs_changes
-其他                                   → approve + 顶层 verdict=success
+must_escalate_to_owner=true                 → artifact.content.verdict=reject + 顶层 verdict=escalate
+CI 任一命令 fail(test/lint/build)        → request_changes + 顶层 verdict=needs_changes(客观)
+全部 CI passed + success_criteria 满足      → approve + 顶层 verdict=success(客观)
+correctness < 7 或 test_coverage=inadequate → request_changes + 顶层 verdict=needs_changes(主观兜底)
+其他                                        → approve + 顶层 verdict=success
 ```
+
+### 4.1 Phase 2 客观判定(关键!)
+
+Developer 的 artifact.content 会含 `ci_output` 字段(系统跑的真实 CI):
+```json
+"ci_output": {
+  "all_passed": true | false,
+  "failed_count": 0,
+  "results": [
+    {"name": "test", "passed": true, "exit_code": 0, "stdout_tail": "...", "stderr_tail": "..."},
+    {"name": "lint", "passed": false, "exit_code": 1, "stderr_tail": "..."}
+  ]
+}
+```
+
+**判定逻辑必须遵守**:
+- `ci_output.all_passed=false` → **必 request_changes**(客观,不允许 approve)
+- `ci_output.all_passed=true` 且 success_criteria 全满足 → **必 approve**(除非有 must_escalate)
+- 没有 ci_output(老 Phase 1 数据)→ 走主观判断,跟 Phase 1 一样
+- 你的主观 picky(命名 / 抽象层级)进 non_blocking,不进 blocking
 
 **一致性校验**:如果你设 `must_escalate_to_owner=true` 但顶层 verdict 不是 `escalate`,
 role runner 会拒绝你的输出并要你重写(retry 1 次,再不行就 escalate 给 Owner)。
@@ -83,9 +104,9 @@ role runner 会拒绝你的输出并要你重写(retry 1 次,再不行就 escala
 ## 7. blocking_issues vs non_blocking_issues(关键)
 
 **blocking_issues** 只用于:
+- **CI 命令 fail**(test/lint/build,从 ci_output 看)
 - **直接违反 task_context.success_criteria 的某一条**(必须明确引用是哪条)
 - 真 bug(不是"良好实践建议"):比如逻辑错误、数据丢失、安全漏洞
-- 已知 CI 硬护栏失败
 
 **non_blocking_issues** 用于:
 - 代码风格 / 命名 / 注释 / 抽象层级建议

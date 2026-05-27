@@ -20,6 +20,18 @@ from orchestrator.worktree._internal.manager import (
     list_changed_files,
     worktree_path,
 )
+from orchestrator.worktree._internal.protected import (
+    PathCheckResult,
+    PathProtection,
+    ProtectedPathError,
+    assert_writable,
+    check_path,
+)
+from orchestrator.worktree._internal.ci import (
+    CIResult,
+    CommandResult,
+    run_commands,
+)
 
 __all__ = [
     "WorktreeError",
@@ -29,4 +41,14 @@ __all__ = [
     "git_diff",
     "list_changed_files",
     "worktree_path",
+    # protected_paths
+    "PathProtection",
+    "PathCheckResult",
+    "ProtectedPathError",
+    "check_path",
+    "assert_writable",
+    # CI
+    "CIResult",
+    "CommandResult",
+    "run_commands",
 ]

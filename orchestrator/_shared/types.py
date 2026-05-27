@@ -223,6 +223,8 @@ class ContextPack(BaseModel):
     project_memory: dict[str, Any] = Field(default_factory=dict)
     role_specific_data: dict[str, Any] = Field(default_factory=dict)
     previous_violation: dict[str, Any] | None = None
+    # Phase 2:任务的 git worktree 路径(state_machine 在 PM_PLANNING 后填)
+    worktree_path: str | None = None
 
 
 class RoleInvocationInput(BaseModel):
@@ -348,6 +350,13 @@ class TaskState(BaseModel):
     # escalation
     escalation_reason: str = ""
     escalation_detail: str = ""
+
+    # Phase 2:任务的 git worktree(state_machine 在 PM_PLANNING 后创建)
+    worktree_path: str | None = None
+    approval_required_paths: list[str] = Field(default_factory=list)
+    # Phase 2.6:subtask 级独立 escalate
+    failed_subtasks: list[str] = Field(default_factory=list)
+    completed_subtasks: list[str] = Field(default_factory=list)
 
     extra: dict[str, Any] = Field(default_factory=dict)
 
