@@ -16,8 +16,11 @@ from dataclasses import dataclass
 from typing import Any
 
 # 模型定价(USD per 1M tokens,2026 年中估值)
+# 注:走 Zenmux 等代理实际费用以代理商账单为准,这里只用于 budget 预估
 PRICING = {
     "claude-sonnet-4-5": {"input": 3.0, "output": 15.0},
+    "claude-sonnet-4-6": {"input": 3.0, "output": 15.0},
+    "claude-opus-4-6": {"input": 15.0, "output": 75.0},
     "claude-opus-4-7": {"input": 15.0, "output": 75.0},
     "claude-haiku-4-5-20251001": {"input": 0.8, "output": 4.0},
     # fallback
@@ -63,7 +66,12 @@ def call_claude(
     if not api_key:
         raise RuntimeError("缺少环境变量 ANTHROPIC_API_KEY")
 
-    client = Anthropic(api_key=api_key)
+    # 支持自定义 base_url(走 Zenmux / 其他 Anthropic 兼容代理)
+    base_url = os.environ.get("ANTHROPIC_BASE_URL")
+    client_kwargs: dict[str, Any] = {"api_key": api_key}
+    if base_url:
+        client_kwargs["base_url"] = base_url
+    client = Anthropic(**client_kwargs)
     last_err: Exception | None = None
 
     for attempt in range(max_retries + 1):

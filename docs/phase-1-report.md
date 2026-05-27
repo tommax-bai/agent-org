@@ -150,3 +150,50 @@
 4. **signal schema 容错**:Pydantic Signal model 加 alias(`role` / `role_id` → `target`)。
    或者保持现在的"严格 + retry hint",看下次跑能不能修正
 
+
+---
+
+## Round 5 结果:Claude Opus 4.6 PM 实验(2026-05-27,via Zenmux)
+
+接入 Claude Opus 4.6(Zenmux 代理,base_url=https://zenmux.ai/api/anthropic),
+让 PM 用 Claude,其他角色保持 Qwen plus。
+
+### 结果
+
+| | Qwen PM(Round 4) | Claude Opus PM(Round 5) |
+|---|---|---|
+| **DONE 数** | 2/5 | **1/5**(反而更差!) |
+| 单次 PM cost | $0.002 | $0.13(贵 65×) |
+| 总 cost 5 任务 | $0.08 | **$0.55** |
+| PM 拆 subtask 数 | 4-5 个细分 | 1-2 个粗分 |
+| PM confidence 范围 | 0.75-0.92 | 0.6-0.92 |
+| task-005 模糊任务 confidence | 0.85(过于自信) | **0.6(更诚实)** |
+
+### 失败模式
+
+- task-002 developer:diff 输出过长 → JSON parse "Unterminated string"
+- task-005 signal_schema:Claude 也写错 `target`/`type` 字段(说明 prompt 模糊,跟模型无关)
+- task-003/004 attempt_limit:Qwen developer 跟不上 Claude PM 的"高 abstraction"拆解
+
+### 关键洞察
+
+**不是 Claude 笨,是 Claude PM + Qwen developer 组合不匹配**:
+- Claude PM 倾向拆"高 abstraction"(每 subtask 包含完整 feature 单元)
+- Qwen developer 一个 call 要做完整 feature → 输出过长 → schema 错
+- Qwen PM 拆"细颗粒"(每 subtask 很小)→ developer 单次输出 < 4KB → 稳
+
+### 结论
+
+1. **PM 模型不是 Phase 1 瓶颈**——换 Claude Opus 没改善(反而更差)
+2. **真正的瓶颈**:
+   - Reviewer 偏严(对 success_criteria 之外的工程实践仍发 blocking)
+   - Developer 输出过长导致 JSON parse 失败(架构问题:发输出长度限制 / strict JSON mode)
+   - signal_schema 字段名不匹配(Qwen / Claude 都写错)
+3. **下一步真正有效的方向**(按 ROI):
+   - **Signal model 加 alias**:接受 `role` / `from` 等别名,转换成 `target`。零成本。
+   - **Developer prompt 加 diff 长度限制**:`diff` 字段不超过 X 行,长 diff 用 summary 替代
+   - **Reviewer 全换 Claude(不只 PM)**:Reviewer 是质量瓶颈,不是 PM
+4. **Claude 配置保留**:`.env` 加了 `ANTHROPIC_API_KEY` + `ANTHROPIC_BASE_URL`,
+   PM model_policy.fallback 改成 claude-opus-4-6(Qwen 不可用时备用)。
+   后续可以单独把某个 role 切 Claude,prompt 改动零
+
