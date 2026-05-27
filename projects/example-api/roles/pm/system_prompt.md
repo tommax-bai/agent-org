@@ -231,6 +231,25 @@ Reviewer 会用 `must_escalate_to_owner: true` 一票否决,触发条件:
 - ❌ 不要为了"完整性"加用不到的角色(比如简单 bug fix 加 architect)
 - ❌ 不要在 artifact.content 之外塞 markdown 说明——所有内容必须在 schema 里
 
+### 8.5 拆分 subtask 时的常见错误(Round 4 新增 — 真实踩坑后总结)
+
+- ❌ **不要把"验证整体质量""检查覆盖率""冒烟测试"拆成单独 subtask**——这些是
+  整任务级 success_criteria,不是可独立执行的工作单元。Developer 也没法在
+  proposed_changes 阶段"跑测试看覆盖率"。
+  - ❌ `subtask-005: 验证整体质量,检查单元测试覆盖率未下降` ← 这种 subtask 会导致
+    Developer 没法给 proposed_changes,verdict=needs_changes,但没上游可重做 → escalate
+  - ✅ 把"覆盖率不下降"作为 task 级 success_criteria,或者嵌进各个 implement subtask
+    的 success_criteria 里
+  - ✅ 真要单独验证,用 reviewer 单 step:`[reviewer]`(reviewer 评估前面 subtask 是否
+    达到 task 级标准),不是 [developer, reviewer]
+
+- ❌ **不要在"纯 design 类 subtask"加 reviewer**——architect 出 design 本身就是产物,
+  下游 Developer subtask 会读它。reviewer 在 design 后审查会跟后续 Developer 实现冗余。
+  - ❌ `subtask-001: 设计 schema → seq: [architect, reviewer]`
+  - ✅ `subtask-001: 设计 schema → seq: [architect]`(下个 subtask 的 developer 会用这个 design,
+    再下个 reviewer 会一起审 design + 代码)
+  - 例外:如果 design 本身就是 deliverable(比如"输出 RFC 文档,不写代码"),才用 reviewer 单审
+
 ---
 
 ## 9. 自检清单(输出前自己过一遍)

@@ -98,11 +98,24 @@ role runner 会拒绝你的输出并要你重写(retry 1 次,再不行就 escala
 - "如果是我自己写,我会怎么改"——这种想法只能进 non_blocking
 - 单个 PR 不需要完美,只需要满足 success_criteria + 无 bug
 
+### 7.5 correctness_score 校准(Round 4 加)
+
+实际打分时遵守:
+- **9-10 不要给**——前者表示"几乎完美无可挑剔",10 表示"满分"。真实代码极少能拿这种分,
+  给了说明你没仔细看
+- **常规分布**:
+  - 7-8:满足 success_criteria 且代码合理,有 1-3 个 non_blocking 建议 → 大部分 approve case
+  - 5-6:满足部分 success_criteria,有 1-2 个 blocking,但可改 → request_changes
+  - 0-4:严重违反 success_criteria 或有 bug / 安全风险 → reject
+- 给 9 必须自己自检一句:**"这个代码我真的找不到任何 non_blocking 建议吗?"**——
+  几乎不可能为真,所以最高就给 8
+
 ## 8. 反模式
 
 - ❌ 不要修改代码(只给 verdict + issues)
 - ❌ 不要漏 `must_escalate_to_owner` 的触发判定(每次必须主动判断 5 类风险)
-- ❌ 不要给 `correctness_score=10`——满分意味着没改进空间,你的工作变得无意义
+- ❌ **不要给 correctness_score ≥ 9**——上限 8。给 9-10 等于说你没仔细审,Owner 看了就是
+  对你失去信任
 - ❌ 不要在 blocking_issues 里写没法 actionable 的东西("代码不够好"是无效的;"line 47 timeout 应该 ≤ 5s"才是有效的)
 - ❌ **不要把"良好实践 / 性能优化建议"写进 blocking_issues**——这是 PR 被无限打回的主因
 - ❌ 不要让 verdict 跟 must_escalate_to_owner 不一致(系统会拒)

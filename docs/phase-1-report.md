@@ -120,3 +120,33 @@
 - ✅ 总代码量 + 文档 push 到 GitHub,Owner 可以 review
 
 **Phase 1 完成,可以进 Phase 2**(Git worktree + executor 集成,这是 OpenSpec 引入触发点之一,详见 design-history.md Part IV)。
+
+---
+
+## Round 4 结果(2026-05-27 第二次迭代)
+
+改动:
+- PM prompt:加"不要拆 verify subtask"反例 + "design-only subtask 不加 reviewer" 反例
+- Reviewer prompt:`correctness_score` 上限改 8(强迫不给 9-10)
+- protocol.py: signal schema 错时 retry hint 加 "target 不是 role_id" 提示
+
+| | Round 3 | Round 4 |
+|---|---|---|
+| DONE | 2/5 | 2/5 |
+| task-003 | attempt_limit (subtask-004) | attempt_limit (subtask-002,不同 subtask) |
+| task-004 | needs_changes_no_upstream | needs_changes_no_upstream(同) |
+| task-005 | DONE(意外) | signal_schema(LLM 用 role 字段而不是 target) |
+| correctness ≥ 9 | 出现 | **全部 ≤ 8(prompt cap 生效)** |
+
+**Round 4 vs Round 3 结论**:DONE 率不变,但**质量数字校准成功**(correctness 不再虚高)。
+失败模式说明:**LLM prompt 调优有边际效益递减**——剩余 3 个失败本质是 Qwen plus
+没严格按 system prompt 复杂规则执行(尤其多步指令组合)。
+
+## 长期改进方向(留到 Phase 2 之前 / Phase 1.5)
+
+1. **接 Claude Sonnet 对比一次**——预计严格执行 prompt 比例更高
+2. **PM dispatcher 加硬 validator**:role_sequence step 1 不能是 reviewer 类(走 RETRY_PM)
+3. **subtask 级独立 escalate**——单 subtask 失败不挂整任务(架构改动,Phase 2 时一起做)
+4. **signal schema 容错**:Pydantic Signal model 加 alias(`role` / `role_id` → `target`)。
+   或者保持现在的"严格 + retry hint",看下次跑能不能修正
+

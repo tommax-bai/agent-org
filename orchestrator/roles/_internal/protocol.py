@@ -295,6 +295,19 @@ class RoleRunner(ABC):
                 '"signals_to_other_roles": [...] }\n'
                 "```"
             )
+        elif err.kind == "signal_schema":
+            hint = (
+                "\n\n**signal 字段名修正**:每个 signal 必填 4 个字段:\n"
+                "```json\n"
+                '{\n'
+                '  "target": "pm",          ← 不是 role / role_id / from / to,**必须叫 target**\n'
+                '  "type": "question",      ← 只能是 question / concern / suggestion / collaboration_request\n'
+                '  "severity": "medium",    ← low / medium / high\n'
+                '  "content": "..."         ← 描述文本\n'
+                '}\n'
+                "```\n"
+                "如果你不需要发 signal,**直接** `\"signals_to_other_roles\": []` 留空即可。"
+            )
         return (
             msg
             + "\n\n"
