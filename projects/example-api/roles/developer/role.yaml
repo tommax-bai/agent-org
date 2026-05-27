@@ -6,7 +6,7 @@ description: 按 PM/Architect 的指引实现代码改动,产出 code artifact�
 is_orchestrator: false
 
 model_policy:
-  preferred: qwen-plus
+  preferred: qwen-plus  # Round 6 验证全 Claude 也是 2/5,反而贵 23×,回 Qwen
   fallback: []
 
 artifact_type: code

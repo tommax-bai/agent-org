@@ -6,7 +6,7 @@ description: 审查 Developer / Architect 的产物,输出结构化 review。
 is_orchestrator: false
 
 model_policy:
-  preferred: qwen-plus
+  preferred: qwen-plus  # Round 6 验证全 Claude 也是 2/5,反而贵 23×,回 Qwen
   fallback: []
 
 artifact_type: review

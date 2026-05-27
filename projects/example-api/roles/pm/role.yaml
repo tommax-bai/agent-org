@@ -7,9 +7,9 @@ description: 任务编排者 — 业务拆解 + 角色调度。不做技术决�
 is_orchestrator: true
 
 model_policy:
-  preferred: qwen-plus           # Round 5 验证 Claude opus PM 反而更差(详见 phase-1-report)
+  preferred: qwen-plus  # Round 6 验证全 Claude 也是 2/5,反而贵 23×,回 Qwen
   fallback:
-    - claude-opus-4-6            # 走 Zenmux,API key + base_url 在 .env
+    - qwen-plus  # 备用降级
 
 # PM 产生的 artifact 类型是 dispatch_plan
 artifact_type: dispatch_plan

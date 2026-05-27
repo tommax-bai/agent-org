@@ -56,7 +56,7 @@ def call_qwen(
     system_prompt: str,
     user_message: str,
     model: str = "qwen-plus",
-    max_tokens: int = 4000,
+    max_tokens: int = 16000,    # Round 6 实测:Developer 长 diff 输出会被截断
     max_retries: int = 2,
 ) -> QwenResponse:
     """同步调 Qwen(DashScope OpenAI 兼容接口),失败重试,指数退避。"""

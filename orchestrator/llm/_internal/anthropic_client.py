@@ -51,7 +51,7 @@ def call_claude(
     system_prompt: str,
     user_message: str,
     model: str = "claude-sonnet-4-5",
-    max_tokens: int = 4000,
+    max_tokens: int = 16000,   # Round 6 实测:长 diff 输出会被 4000 截断 → JSON parse 失败
     max_retries: int = 2,
 ) -> LLMResponse:
     """同步调用 Claude API,失败重试最多 max_retries 次,指数退避。"""

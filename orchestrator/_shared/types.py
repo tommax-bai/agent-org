@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 # =====================================================================
@@ -193,10 +193,19 @@ class Artifact(BaseModel):
 
 
 class Signal(BaseModel):
-    target: str
-    type: Literal["question", "concern", "suggestion", "collaboration_request"]
+    """LLM 经常把 target 字段写成 role / role_id / target_role / from。
+
+    用 pydantic alias 兼容,所有变体都映射到 `target`。
+    Round 6 实测发现:即使 Claude Opus 也会写错(目击 target_role),
+    所以模型升级不解决,必须容错处理。
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    target: str = Field(validation_alias=AliasChoices("target", "role", "role_id", "target_role", "from"))
+    type: Literal["question", "concern", "suggestion", "collaboration_request"] = "concern"
     severity: Literal["low", "medium", "high"] = "medium"
-    content: str
+    content: str = ""
     immediate_escalate_required: bool = False
     immediate_escalate_reason: str = ""
 

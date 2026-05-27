@@ -28,7 +28,7 @@ def call_llm(
     system_prompt: str,
     user_message: str,
     model: str,
-    max_tokens: int = 4000,
+    max_tokens: int = 16000,
     max_retries: int = 2,
 ) -> LLMCallResult:
     if model.startswith("claude-"):

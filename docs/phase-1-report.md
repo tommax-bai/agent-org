@@ -197,3 +197,72 @@
    PM model_policy.fallback 改成 claude-opus-4-6(Qwen 不可用时备用)。
    后续可以单独把某个 role 切 Claude,prompt 改动零
 
+
+---
+
+## Round 6 + 7 结果(2026-05-27,架构层修复尝试)
+
+### Round 6: 全部角色切 Claude Opus 4.6(via Zenmux)
+
+| | Round 4(Qwen)| Round 6(全 Claude Opus)|
+|---|---|---|
+| DONE 数 | 2/5 | **2/5(没改善)** |
+| 总成本 | $0.07 | **$1.65(23×)** |
+| 单次 PM cost | $0.002 | $0.13 |
+| task-001 耗时 | 250s | 119s(快 2 倍) |
+| 失败模式 | attempt_limit / no_upstream | parse(Developer diff 24KB)/ pm_runner(Claude PM 字段名错) |
+
+**结论**:全 Claude 没突破 2/5,且引入新问题(Developer 写更长 diff,反而更易 parse 失败)。
+
+### Round 7: Qwen + 架构修复(Signal alias + max_tokens 16000)
+
+修复:
+- `Signal` model 加 `validation_alias`,接受 `role` / `role_id` / `target_role` / `from`
+- `max_tokens` 默认 4000 → 16000(防 Developer 长 diff 截断)
+
+结果:**1/5 DONE**(只 task-005 ambiguous!)
+
+实际观察:max_tokens 加大后,LLM 倾向输出**更详细**,Developer 真的写 24KB 的 diff,
+单字段 `diff` 太长 → JSON parse 仍然失败(但不是 unterminated 截断,是 LLM 真给了 24KB 字符)
+
+### 7 轮综合(2026-05-27 最终)
+
+| Round | DONE | 改动 | 关键发现 |
+|---|---|---|---|
+| 1 | 0/5 | YAML parser baseline | 全 parser 崩 |
+| 2 | 2/5 | JSON 优先 + reviewer lenient | 突破 0 |
+| 3 | 2/5 | PM 加规则 + reviewer 完整示例 | 持平 |
+| 4 | 2/5 | reviewer correctness cap 8 | 持平,数字校准 |
+| 5 | 1/5 | Claude Opus PM | 反而更差,Claude PM 拆得太粗 |
+| 6 | 2/5 | 全 Claude Opus | 持平,**$1.65**(贵 23×) |
+| 7 | 1/5 | Qwen + Signal alias + max_tokens 16k | 持平 / 反而退,长 diff 仍然崩 |
+
+**DONE 数:0 → 2 → 2 → 2 → 1 → 2 → 1**(2±1 是稳态)
+
+## 最终结论:Phase 1 架构有天花板
+
+经过 7 轮迭代(包含 prompt 调优 + 模型升级 + 架构修复),DONE 率稳定在 2±1/5,
+**这是当前架构的自然上限**。继续在 Phase 1 框架内迭代收益已经为零。
+
+### 真正的瓶颈(需要 Phase 2 架构改动才能突破)
+
+1. **subtask 级独立 escalate**——目前任一 subtask 失败 → 整任务挂 → 失败概率乘积放大。
+   多 subtask 任务(complex_feature/refactor)失败率结构性高
+2. **Developer 不该用 "proposed_changes 单字段 diff"**——LLM 倾向写长 diff,JSON 单字段
+   24KB+ 必然各种 parse 问题。Phase 2 Git worktree + Claude Code CLI 真改文件,
+   diff 由 git 生成,LLM 输出只需"我改了哪些文件"摘要
+3. **Reviewer 看 proposed_changes 没法验证**——本质看不到代码真行为,只能挑文本毛病。
+   Phase 2 + 真改文件 + 跑 CI = reviewer 看 test pass/fail 才靠谱
+
+### 给 Owner 的建议(基于 7 轮数据)
+
+**强烈建议直接进 Phase 2**,而不是再继续 Phase 1 内打磨:
+- Phase 1 内最多到 ~3/5(运气好),不会到 5/5
+- Phase 2 改架构(worktree + CI)后,这 3 个根因全部消失
+- 在 Phase 1 框架内继续投入 = 给走错路加速
+
+**已完成的有价值的工作**(留给 Phase 2 直接用):
+- Signal alias + max_tokens 16k + JSON parser:都是好修复,Phase 2 也需要
+- correctness cap 8:reviewer 校准基础设施
+- 5 个真实任务 + escalation 数据:Phase 2 验证的回归测试基线
+
