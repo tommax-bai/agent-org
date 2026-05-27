@@ -1218,6 +1218,35 @@ LLM 角色不是独立进程,是 prompt + 一次调用。
 | Reviewer Panel(跨模型) | V2 高风险场景 | LLM 错误相关性问题待解 |
 | Arbiter(Opus 仲裁) | V2 可选 | V1 用不到 |
 | H 域 self-evolution | V3+(等业界数据) | 2026 年还不成熟 |
+| **OpenSpec 工作流** | **Phase 2 启动时 re-evaluate** | Phase 1 是 prompt 迭代,git commit + golden_dataset 已足够;OpenSpec 强在"多步骤改动 + pre-implementation review",Phase 2(worktree+executor 跨 spec+code+infra)才是它的场景。详见下方触发条件 |
+
+### OpenSpec 引入触发条件(2026-05-27 Owner 询问 4 次后记下)
+
+**满足以下任一**就 re-evaluate 引入:
+
+1. **Phase 2 启动时**(Git worktree + executor 集成)
+   - 改动跨 spec + 代码 + 新基础设施,典型 multi-step 场景
+   - 这是设计上最自然的引入点
+
+2. **出现 git log 看不出 why 的痛点**
+   - 比如某次 prompt 改动后行为变了,翻 git log 找不到 reason
+   - commit message 不足以追溯设计意图
+   - 多个 prompt 改动同时在 in-flight,Owner 自己都不记得哪些已 merge
+
+3. **agent-org 自己开始 propose 代码改动**(V2+ self-evolution,V1 已否决)
+   - 那时 agent 需要提交结构化 proposal,Owner 异步 review
+   - 这是 OpenSpec 价值最大化的场景
+
+**不要因为**以下原因引入(已踩过的坑):
+- "开始写代码了所以该用专业工具"——工具应该解决具体痛点,不是阶段标志
+- "趁现在没多少 spec 先迁移省事"——迁移成本一次性,但维护成本持续;只要 git + design-history 还够用,就不引入
+- "其他 multi-agent 项目用了"——参见 [[feedback-multi-layer-design-smell]]:多套并行流程是设计味道
+
+**引入时要做的**(到时候直接抄):
+- `openspec init` 在仓库根目录
+- 把 `docs/decisions/` 现有 ADR 迁过去(可选,新 proposal 走 openspec/changes/)
+- 把 OpenSpec workflow 写进 CLAUDE.md
+- design-history.md 保留(它是历史档案,不是 change proposal 队列,跟 OpenSpec 不冲突)
 
 ---
 
