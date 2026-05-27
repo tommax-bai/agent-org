@@ -5,7 +5,7 @@
   "description": "Developer 类角色产物。Phase 0/1: proposed_changes;Phase 2+: 真改文件",
   "type": "object",
   "required": ["summary"],
-  "additionalProperties": false,
+  "additionalProperties": true,
   "properties": {
     "summary": {"type": "string", "minLength": 1},
     "proposed_changes": {
@@ -22,18 +22,44 @@
         }
       }
     },
-    "changed_files": {
-      "description": "Phase 2+ 用:真改后的文件清单",
+    "file_edits": {
+      "description": "Phase 2+:LLM 输出的文件编辑操作(Python 执行写盘)",
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["path", "change_type"],
+        "required": ["path", "operation"],
         "properties": {
           "path": {"type": "string"},
-          "change_type": {"type": "string", "enum": ["create", "modify", "delete"]},
-          "reason": {"type": "string"}
+          "operation": {"type": "string", "enum": ["create", "modify", "delete"]},
+          "content": {"type": "string", "description": "完整新文件内容(operation != delete 时必填)"}
         }
       }
+    },
+    "changed_files": {
+      "description": "Phase 2+:真实改动的文件路径(系统从 git diff 拿)",
+      "oneOf": [
+        {"type": "array", "items": {"type": "string"}},
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {"type": "string"},
+              "change_type": {"type": "string"}
+            }
+          }
+        }
+      ]
+    },
+    "git_diff": {"type": "string", "description": "Phase 2+:系统跑 git diff HEAD 拿到"},
+    "protected_warnings": {
+      "type": "array",
+      "description": "Phase 2+:approval_required / warn_only 路径警告"
+    },
+    "approval_required_paths": {"type": "array", "items": {"type": "string"}},
+    "ci_output": {
+      "type": "object",
+      "description": "Phase 2.4+:系统跑 project.commands 的结果"
     },
     "proposed_commands": {
       "type": "array",
