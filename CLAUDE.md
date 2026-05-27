@@ -62,14 +62,56 @@ docs/key-design-summary.md                 1500 字速览,5 分钟建立全局
 docs/autonomous-agent-system-design.md     主设计 v2.4(长期总纲)
 docs/phase-0-1-execution-spec.md           开工施工图 v2.4
 docs/design-history.md                     14 次修订 + 已否决清单
+docs/phase-1-report.md / phase-2-report.md 各阶段实测报告
 docs/deployment-decision.md                部署架构
 docs/dependencies.md                       工具栈版本约束
 docs/operations/coding-subagent-prompt.md  开发期 AI 助手 prompt
 docs/operations/ops-subagent-prompt.md     运维期 AI 助手 prompt
 constitution.md                            12 条宪法(从主文档抽出,真相源在主文档)
+openspec/changes/                          Phase 3 起的 change proposal(OpenSpec workflow)
+openspec/specs/                            归档的 capability spec(OpenSpec archive 后填)
 ```
 
 讨论中提到"宪法第 X 条""第 Y 条修订""已否决清单"时,去这些文件里查,别凭印象。
+
+---
+
+## 变更工作流(Phase 3+ 用 OpenSpec)
+
+Phase 0A-2 用 commit message + design-history 记录变更。**Phase 3 起**,跨架构层的
+新功能(多文件 / 跨模块 / 新基础设施)走 OpenSpec workflow:
+
+```bash
+# 1. 创建 change(kebab-case 名字)
+npx -y @fission-ai/openspec new change <name>
+
+# 2. 写 4 个 artifact(看 .github/skills/openspec-*/SKILL.md 模板)
+#    openspec/changes/<name>/proposal.md   # why + what
+#    openspec/changes/<name>/design.md     # how(技术决策)
+#    openspec/changes/<name>/specs/<cap>/spec.md   # ADDED/MODIFIED Requirements + scenarios
+#    openspec/changes/<name>/tasks.md      # checkbox 实施步骤
+
+# 3. 验证
+npx -y @fission-ai/openspec validate <name>
+npx -y @fission-ai/openspec status --change <name>
+
+# 4. 实施完成后 archive
+npx -y @fission-ai/openspec archive <name>
+# → spec 文件移到 openspec/specs/<cap>/spec.md(真相源)
+# → change 移到 openspec/changes/archive/<name>/
+```
+
+**什么时候用 OpenSpec(不要每个 commit 都用)**:
+- 跨架构层的多步骤改动(Phase 3 PR 生成 / Phase 4 记忆系统等)
+- Owner 提的新 feature 需要 pre-implementation review
+- 改动会引入新 capability(新 spec 文件)
+
+**什么时候直接 commit(不走 OpenSpec)**:
+- 单文件 bug fix / prompt 调优
+- 小重构
+- 文档错别字
+
+详细引入背景见 [design-history.md Part IV "OpenSpec 引入触发条件"](docs/design-history.md)。
 
 ---
 
